@@ -24,7 +24,8 @@ app.register_blueprint(multiplication_bp)
 # 游戏列表配置
 GAMES = [
     {'name': '字字大冒险', 'route': '/word-quest', 'file': 'word-quest.html'},
-    {'name': '乘法口诀表消消乐', 'route': '/multiplication-game', 'file': 'multiplication-game.html'}
+    {'name': '乘法口诀表消消乐', 'route': '/multiplication-game', 'file': 'multiplication-game.html'},
+    {'name': '仙境大冒险 — 生字听写小游戏', 'route': '/listen-write', 'file': 'listen_write.html'},
 ]
 
 # ============== 工具函数 ==============
@@ -87,6 +88,14 @@ def multiplication_game():
     if 'user_id' not in session:
         return redirect('/login')
     return render_template('multiplication-game.html')
+
+@app.route('/listen-write')
+def listen_write():
+    """仙境大冒险 — 生字听写小游戏页面"""
+    if 'user_id' not in session:
+        return redirect('/login')
+    return render_template('listen_write.html')
+
 
 # ============== 认证 API ==============
 

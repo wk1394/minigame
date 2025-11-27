@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>仙境大冒险 — 生字听写小游戏</title>
+<style>
+  :root{--bg:#ffecd3;--card:#fff;--accent:#7b4cff;--muted:#666;}
+  body{margin:0;font-family: "PingFang SC","Helvetica Neue",Arial, sans-serif;background:linear-gradient(180deg,#ff9a9e 0%, #fecfef 50%, #fffed8 100%);color:#222;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .wrap{width:100%;max-width:980px;background:linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.95));border-radius:14px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,0.12)}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  h1{font-size:20px;margin:0;color:var(--accent)}
+  .score{font-size:14px;color:var(--muted)}
+  .controls{display:flex;gap:8px}
+  button{background:var(--accent);color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer;box-shadow:0 3px 8px rgba(123,76,255,0.25)}
+  button.secondary{background:#fff;color:var(--accent);border:1px solid rgba(0,0,0,0.06)}
+  main{display:grid;grid-template-columns: 360px 1fr;gap:14px}
+  .panel{background:var(--card);padding:12px;border-radius:10px;min-height:320px}
+  .panel h2{margin:0 0 8px 0;font-size:16px;color:#333}
+  .word-list{display:flex;flex-wrap:wrap;gap:8px}
+  .word-card{width:78px;height:78px;border-radius:10px;background:linear-gradient(180deg,#fff,#f6f6ff);display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 6px 12px rgba(0,0,0,0.06);cursor:pointer;user-select:none}
+  .word-card.small{width:56px;height:56px;font-size:20px}
+  .center{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%}
+  .big-char{font-size:48px;color:var(--accent);margin-bottom:8px}
+  .controls-row{display:flex;gap:8px;margin-bottom:8px}
+  .task{padding:12px;border-radius:8px;background:linear-gradient(90deg,#fff,#fbfbff)}
+  #draggable-area{display:flex;gap:8px;flex-wrap:wrap;min-height:70px;padding:8px;border:2px dashed #eee;border-radius:8px}
+  .draggable{padding:8px 12px;border-radius:8px;background:#fafafa;border:1px solid #eee;cursor:grab}
+  .drop-slot{min-width:56px;min-height:40px;border-radius:6px;background:#fff;border:2px dashed #f0f0f0;display:flex;align-items:center;justify-content:center}
+  input[type="text"]{padding:8px;border-radius:8px;border:1px solid #eee;width:100%}
+  .hint{font-size:13px;color:var(--muted);margin-top:8px}
+  footer{margin-top:12px;text-align:right;color:var(--muted);font-size:12px}
+  .correct{background:linear-gradient(90deg,#caf0c6,#dfffe0)}
+  .wrong{background:linear-gradient(90deg,#ffd6d6,#ffecec)}
+  .badge{display:inline-block;padding:6px 10px;background:#fff;border-radius:999px;border:1px solid #eee;font-size:12px}
+  .hidden{display:none}
+  .center-row{display:flex;gap:6px;align-items:center}
+  .img-preview{width:100%;height:140px;object-fit:cover;border-radius:8px;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>仙境大冒险 · 生字听写挑战</h1>
+    <div class="center-row">
+      <div class="score">得分: <span id="score">0</span></div>
+      <div style="width:12px"></div>
+      <div class="badge" id="level">等级：入门</div>
+    </div>
+  </header>
+
+  <main>
+    <!-- 左侧：卡片 & 控制 -->
+    <section class="panel" aria-labelledby="panel1">
+      <h2 id="panel1">字词卡片</h2>
+      <div class="task">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:600">当前字词集</div>
+          <div class="hint">点击卡片朗读 / 翻转</div>
+        </div>
+        <div style="height:10px"></div>
+        <div class="word-list" id="cards"></div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <div class="task">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:600">模式选择</div>
+          <div style="font-size:13px;color:var(--muted)">练习与听写交替</div>
+        </div>
+        <div style="height:8px"></div>
+        <div class="controls">
+          <button id="btn-flash">生字认读</button>
+          <button id="btn-listen" class="secondary">听写模式</button>
+          <button id="btn-drag" class="secondary">拖拽组词</button>
+          <button id="btn-quiz" class="secondary">选择 / 造句</button>
+          <button id="btn-reset" class="secondary">重置进度</button>
+        </div>
+        <div class="hint">衡量熟练度：答对次数越多，得分越高</div>
+      </div>
+    </section>
+
+    <!-- 右侧：任务面板 -->
+    <section class="panel" id="taskPanel">
+      <h2>任务面板</h2>
+      <div id="taskContent">
+        <!-- 默认欢迎 -->
+        <div class="center">
+          <img src="" alt="" id="welcomeImg" class="img-preview hidden" />
+          <div class="big-char">欢迎</div>
+          <div style="font-size:15px;color:var(--muted)">选择左侧模式开始练习</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>数据保存在本地浏览器（localStorage），刷新不丢失。 - 适合课堂与家庭练习</footer>
+</div>
+
+<script>
+/*
+  词表来源：根据你提供的练习页面
+  字：仙、巨、闪、形、顶、位、狗、状
+  词语：风景、景色、风景如画、秀丽、秀美、神奇、神秘、心旷神怡、远近闻名、百闻不如一见
+*/
+const CHAR_LIST = ['仙','巨','闪','形','顶','位','狗','状'];
+const WORD_LIST = [
+  {text:'风景', example:'黄山的风景如画，让人流连忘返。'},
+  {text:'景色', example:'山间的景色非常秀丽。'},
+  {text:'风景如画', example:'这座小镇的风景如画。'},
+  {text:'秀丽', example:'这里的山水秀丽。'},
+  {text:'秀美', example:'湖边的花草显得格外秀美。'},
+  {text:'神奇', example:'这块巨石的形状真是神奇。'},
+  {text:'神秘', example:'云雾使山峰看起来很神秘。'},
+  {text:'心旷神怡', example:'站在山顶，心旷神怡。'},
+  {text:'远近闻名', example:'这座名山远近闻名。'},
+  {text:'百闻不如一见', example:'这些美景百闻不如一见。'}
+];
+
+let score = parseInt(localStorage.getItem('game_score')||0);
+let stats = JSON.parse(localStorage.getItem('game_stats')||'{}'); // record correct counts
+document.getElementById('score').textContent = score;
+updateLevelBadge();
+
+function updateLevelBadge(){
+  const el = document.getElementById('level');
+  if(score<20) el.textContent='等级：入门';
+  else if(score<60) el.textContent='等级：进阶';
+  else el.textContent='等级：大师';
+}
+
+/* render cards */
+const cardsEl = document.getElementById('cards');
+function renderCards(){
+  cardsEl.innerHTML='';
+  CHAR_LIST.forEach(ch=>{
+    const d = document.createElement('div');
+    d.className = 'word-card';
+    d.textContent = ch;
+    d.title = '点击朗读，双击翻转';
+    d.addEventListener('click', ()=>speak(ch));
+    d.addEventListener('dblclick', ()=>flipCard(d,ch));
+    cardsEl.appendChild(d);
+  });
+}
+renderCards();
+
+/* speech synthesis helper */
+function speak(text){
+  if(!('speechSynthesis' in window)) return alert('当前浏览器不支持语音播放 (speechSynthesis)。');
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN';
+  u.rate = 0.9;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(u);
+}
+
+/* flip card: show pinyin + meaning briefly */
+function flipCard(el,ch){
+  const pinyinMap = {'仙':'xiān','巨':'jù','闪':'shǎn','形':'xíng','顶':'dǐng','位':'wèi','狗':'gǒu','状':'zhuàng'};
+  const meaningMap = {
+    '仙':'像神仙一样的人或事物','巨':'巨大','闪':'闪亮；闪现','形':'形状','顶':'顶部','位':'位置','狗':'小型家畜','状':'状态或形状'
+  };
+  const prev = el.textContent;
+  el.textContent = pinyinMap[ch]+'\n'+meaningMap[ch];
+  el.style.fontSize='12px';
+  setTimeout(()=>{
+    el.textContent = prev;
+    el.style.fontSize='';
+  },3000);
+}
+
+/* UI helpers */
+function setTask(html){
+  document.getElementById('taskContent').innerHTML = html;
+}
+
+/* MODE: Flash cards (认读) */
+document.getElementById('btn-flash').addEventListener('click', ()=>{
+  const html = `
+    <div class="center">
+      <div class="big-char" id="flashChar">${CHAR_LIST[0]}</div>
+      <div style="display:flex;gap:8px">
+        <button id="prev">上一字</button>
+        <button id="play">朗读</button>
+        <button id="next">下一字</button>
+      </div>
+      <div style="height:10px"></div>
+      <div class="hint">双击卡片可以看到拼音与词义；练习能提高得分</div>
+    </div>
+  `;
+  setTask(html);
+  let idx = 0;
+  const elChar = document.getElementById('flashChar');
+  document.getElementById('play').addEventListener('click', ()=>speak(CHAR_LIST[idx]));
+  document.getElementById('next').addEventListener('click', ()=>{ idx=(idx+1)%CHAR_LIST.length; elChar.textContent=CHAR_LIST[idx]; });
+  document.getElementById('prev').addEventListener('click', ()=>{ idx=(idx-1+CHAR_LIST.length)%CHAR_LIST.length; elChar.textContent=CHAR_LIST[idx]; });
+  elChar.addEventListener('dblclick', ()=>flipCard(elChar, CHAR_LIST[idx]));
+});
+
+/* MODE: Listen & Type */
+document.getElementById('btn-listen').addEventListener('click', ()=>startListenMode());
+function startListenMode(){
+  // pick a random word
+  const choice = WORD_LIST[Math.floor(Math.random()*WORD_LIST.length)];
+  const html = `
+    <div>
+      <h3>听写模式</h3>
+      <div class="task">
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="playWord">▶️ 播放词语</button>
+          <button id="hintBtn" class="secondary">显示例句</button>
+          <div style="flex:1"></div>
+          <div class="hint">听到词语后，在下面输入汉字并提交</div>
+        </div>
+        <div style="height:8px"></div>
+        <input type="text" id="listenInput" placeholder="在此输入汉字词语" />
+        <div style="height:8px"></div>
+        <div style="display:flex;gap:8px">
+          <button id="submitListen">提交</button>
+          <button id="nextListen" class="secondary">下一题</button>
+        </div>
+        <div class="hint" id="listenHint"></div>
+      </div>
+    </div>
+  `;
+  setTask(html);
+  const playBtn = document.getElementById('playWord');
+  const hintBtn = document.getElementById('hintBtn');
+  const input = document.getElementById('listenInput');
+  const hint = document.getElementById('listenHint');
+  function play(){
+    speak(choice.text);
+  }
+  playBtn.addEventListener('click', play);
+  hintBtn.addEventListener('click', ()=>{ hint.textContent = choice.example; });
+  document.getElementById('submitListen').addEventListener('click', ()=>{
+    const val = input.value.trim();
+    if(!val) return hint.textContent='请先输入答案（汉字）。';
+    if(val === choice.text){
+      hint.textContent = '✔ 正确！+'+10+' 分。' ;
+      addScore(10);
+      recordStat(choice.text,true);
+      // auto next after 1s
+      setTimeout(()=>startListenMode(),800);
+    } else {
+      hint.textContent = '✖ 错误，正确答案：'+choice.text;
+      recordStat(choice.text,false);
+    }
+  });
+  document.getElementById('nextListen').addEventListener('click', ()=>startListenMode());
+  // autoplay once
+  setTimeout(play,200);
+}
+
+/* MODE: Drag & Drop 组词 */
+document.getElementById('btn-drag').addEventListener('click', ()=>startDragMode());
+function startDragMode(){
+  // pick a word with length <=4 for ease, or split into chars
+  const choice = WORD_LIST[Math.floor(Math.random()*WORD_LIST.length)];
+  const chars = Array.from(choice.text);
+  // shuffle letters for draggable
+  const shuffled = chars.slice().sort(()=>Math.random()-0.5);
+  const html = `
+    <div>
+      <h3>拖拽组词</h3>
+      <div class="task">
+        <div class="hint">将下方字卡拖到上方空格，组成正确词语</div>
+        <div style="height:8px"></div>
+        <div id="dropArea" style="display:flex;gap:8px"></div>
+        <div style="height:12px"></div>
+        <div id="dragArea" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        <div style="height:12px"></div>
+        <div style="display:flex;gap:8px">
+          <button id="checkDrag">检查答案</button>
+          <button id="nextDrag" class="secondary">换一题</button>
+        </div>
+        <div class="hint" id="dragHint"></div>
+      </div>
+    </div>
+  `;
+  setTask(html);
+  const dropArea = document.getElementById('dropArea');
+  const dragArea = document.getElementById('dragArea');
+  chars.forEach(_ => {
+    const slot = document.createElement('div');
+    slot.className='drop-slot';
+    slot.dataset.idx = '';
+    dropArea.appendChild(slot);
+  });
+  shuffled.forEach(ch=>{
+    const d = document.createElement('div');
+    d.className='draggable';
+    d.draggable = true;
+    d.textContent = ch;
+    d.addEventListener('dragstart', dragStart);
+    dragArea.appendChild(d);
+  });
+  function dragStart(e){
+    e.dataTransfer.setData('text/plain', e.target.textContent);
+    setTimeout(()=>e.target.classList.add('hidden'),20);
+  }
+  dropArea.addEventListener('dragover', e=>e.preventDefault());
+  dropArea.addEventListener('drop', e=>{
+    e.preventDefault();
+    const val = e.dataTransfer.getData('text/plain');
+    // put to first empty slot
+    const slots = [...dropArea.children];
+    for(let s of slots){
+      if(!s.textContent.trim()){
+        s.textContent = val;
+        break;
+      }
+    }
+    // unhide draggable
+    const drags = [...dragArea.children];
+    for(let dd of drags){
+      if(dd.textContent===val && dd.classList.contains('hidden')) {
+        dd.classList.remove('hidden');
+        break;
+      }
+    }
+  });
+  document.getElementById('checkDrag').addEventListener('click', ()=>{
+    const answer = [...dropArea.children].map(x=>x.textContent.trim()).join('');
+    const hint = document.getElementById('dragHint');
+    if(answer === choice.text){
+      hint.textContent = '✔ 完成！+'+8+' 分';
+      addScore(8);
+      recordStat(choice.text,true);
+      setTimeout(()=>startDragMode(),900);
+    } else {
+      hint.textContent = '✖ 还没完全正确，请再试一试。正确示例：'+choice.text;
+      recordStat(choice.text,false);
+    }
+  });
+  document.getElementById('nextDrag').addEventListener('click', ()=>startDragMode());
+}
+
+/* MODE: Quiz (选择 & 造句) */
+document.getElementById('btn-quiz').addEventListener('click', ()=>startQuizMode());
+function startQuizMode(){
+  // build mixed questions: choose word and a fake option
+  const qType = Math.random()<0.5 ? 'choose' : 'sentence';
+  if(qType === 'choose'){
+    // show picture or meaning - for simplicity use example as hint
+    const choice = WORD_LIST[Math.floor(Math.random()*WORD_LIST.length)];
+    // prepare options
+    const opts = [choice.text];
+    while(opts.length<4){
+      const rnd = WORD_LIST[Math.floor(Math.random()*WORD_LIST.length)].text;
+      if(!opts.includes(rnd)) opts.push(rnd);
+    }
+    opts.sort(()=>Math.random()-0.5);
+    const html = `
+      <div>
+        <h3>选择题：听例句，选择对应词语</h3>
+        <div class="task">
+          <div style="margin-bottom:8px"><button id="playEx">▶️ 播放例句</button></div>
+          <div id="options" style="display:flex;flex-direction:column;gap:8px"></div>
+          <div style="height:8px"></div>
+          <div style="display:flex;gap:8px">
+            <button id="nextQ" class="secondary">下一题</button>
+          </div>
+          <div class="hint" id="quizHint"></div>
+        </div>
+      </div>
+    `;
+    setTask(html);
+    document.getElementById('playEx').addEventListener('click', ()=>speak(choice.example));
+    const optsEl = document.getElementById('options');
+    opts.forEach(o=>{
+      const b = document.createElement('button');
+      b.textContent = o;
+      b.addEventListener('click', ()=>{
+        if(o===choice.text){
+          document.getElementById('quizHint').textContent='✔ 正确！+'+6+' 分';
+          addScore(6);
+          recordStat(choice.text,true);
+        } else {
+          document.getElementById('quizHint').textContent='✖ 错误，正确答案：'+choice.text;
+          recordStat(choice.text,false);
+        }
+      });
+      optsEl.appendChild(b);
+    });
+    document.getElementById('nextQ').addEventListener('click', ()=>startQuizMode());
+  } else {
+    // sentence selection
+    const choice = WORD_LIST[Math.floor(Math.random()*WORD_LIST.length)];
+    // create 4 sentences, one correct (use example), others slightly wrong
+    const sents = [
+      choice.example,
+      (choice.example + '。').replace(/。/,'，很美。'),
+      '今天的风景让我想起了学校的课堂。',
+      '这句话跟词语没有关系。'
+    ].sort(()=>Math.random()-0.5);
+    const html = `
+      <div>
+        <h3>造句题：选出正确使用该词语的句子</h3>
+        <div class="task">
+          <div style="margin-bottom:8px">目标词：<strong>${choice.text}</strong></div>
+          <div id="sents" style="display:flex;flex-direction:column;gap:8px"></div>
+          <div style="height:8px"></div>
+          <div class="hint" id="quizHint2"></div>
+          <div style="height:8px"></div>
+          <div style="display:flex;gap:8px"><button id="nextQ2" class="secondary">下一题</button></div>
+        </div>
+      </div>
+    `;
+    setTask(html);
+    const sentsEl = document.getElementById('sents');
+    sents.forEach(s=>{
+      const b = document.createElement('button');
+      b.textContent = s;
+      b.addEventListener('click', ()=>{
+        if(s === choice.example){
+          document.getElementById('quizHint2').textContent='✔ 正确使用！+'+7+' 分';
+          addScore(7);
+          recordStat(choice.text,true);
+        } else {
+          document.getElementById('quizHint2').textContent='✖ 不是最佳用法。正确示例：'+choice.example;
+          recordStat(choice.text,false);
+        }
+      });
+      sentsEl.appendChild(b);
+    });
+    document.getElementById('nextQ2').addEventListener('click', ()=>startQuizMode());
+  }
+}
+
+/* scoring & stats */
+function addScore(n){
+  score += n;
+  localStorage.setItem('game_score', score);
+  document.getElementById('score').textContent = score;
+  updateLevelBadge();
+}
+function recordStat(word,ok){
+  stats[word] = stats[word] || {correct:0,total:0};
+  stats[word].total += 1;
+  if(ok) stats[word].correct += 1;
+  localStorage.setItem('game_stats', JSON.stringify(stats));
+}
+
+/* reset */
+document.getElementById('btn-reset').addEventListener('click', ()=>{
+  if(confirm('确认重置得分与练习记录？')){
+    localStorage.removeItem('game_score');
+    localStorage.removeItem('game_stats');
+    score = 0; stats = {};
+    document.getElementById('score').textContent = score;
+    updateLevelBadge();
+    alert('已重置。');
+  }
+});
+
+/* initial helpful tips on load */
+setTask(`<div style="padding:20px"><h3>玩法提示</h3>
+<ul>
+<li>点击左侧字卡可以朗读，双击查看拼音和词义。</li>
+<li>选择“听写模式”可听到词语并输入答案；“拖拽组词”练习字序；“选择/造句”练习语感。</li>
+<li>完成练习会获得得分并保存在本地，可查看等级提升。</li>
+</ul>
+<div class="hint">建议：先点“生字认读”，熟悉字后再做听写和组词。</div>
+</div>`);
+
+/* optional: show welcome image if any (not required) */
+const welcomeImg = document.getElementById('welcomeImg');
+// welcomeImg.src = '...'; welcomeImg.classList.remove('hidden');
+</script>
+</body>
+</html>
