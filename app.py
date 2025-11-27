@@ -1,5 +1,5 @@
 from flask import Flask, send_file, jsonify, request, session, redirect
-from flask_mysqldb import MySQL
+import pymysql
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import config
@@ -7,13 +7,15 @@ import config
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
 
-# MySQL配置
-app.config['MYSQL_HOST'] = config.MYSQL_HOST
-app.config['MYSQL_USER'] = config.MYSQL_USER
-app.config['MYSQL_PASSWORD'] = config.MYSQL_PASSWORD
-app.config['MYSQL_DB'] = config.MYSQL_DB
-
-mysql = MySQL(app)
+# 数据库连接函数
+def get_db_connection():
+    return pymysql.connect(
+        host=config.MYSQL_HOST,
+        user=config.MYSQL_USER,
+        password=config.MYSQL_PASSWORD,
+        database=config.MYSQL_DB,
+        cursorclass=pymysql.cursors.DictCursor
+    )
 
 # 游戏列表配置
 GAMES = [
@@ -63,8 +65,10 @@ def register():
     if not username or not password:
         return jsonify({'message': '用户名和密码不能为空'}), 400
 
+    conn = None
     try:
-        cur = mysql.connection.cursor()
+        conn = get_db_connection()
+        cur = conn.cursor()
 
         # 检查用户是否存在
         cur.execute("SELECT id FROM users WHERE username = %s", (username,))
@@ -79,7 +83,7 @@ def register():
         # 创建会员记录
         cur.execute("INSERT INTO members (user_id, membership_type) VALUES (%s, 'free')", (user_id,))
 
-        mysql.connection.commit()
+        conn.commit()
         cur.close()
 
         # 自动登录
@@ -89,6 +93,9 @@ def register():
         return jsonify({'message': '注册成功'}), 200
     except Exception as e:
         return jsonify({'message': f'注册失败: {str(e)}'}), 500
+    finally:
+        if conn:
+            conn.close()
 
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -99,20 +106,25 @@ def login():
     if not username or not password:
         return jsonify({'message': '用户名和密码不能为空'}), 400
 
+    conn = None
     try:
-        cur = mysql.connection.cursor()
+        conn = get_db_connection()
+        cur = conn.cursor()
         cur.execute("SELECT id, password FROM users WHERE username = %s", (username,))
         user = cur.fetchone()
         cur.close()
 
-        if user and check_password_hash(user[1], password):
-            session['user_id'] = user[0]
+        if user and check_password_hash(user['password'], password):
+            session['user_id'] = user['id']
             session['username'] = username
             return jsonify({'message': '登录成功'}), 200
         else:
             return jsonify({'message': '用户名或密码错误'}), 401
     except Exception as e:
         return jsonify({'message': f'登录失败: {str(e)}'}), 500
+    finally:
+        if conn:
+            conn.close()
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
@@ -132,15 +144,17 @@ def get_games():
 @app.route('/api/users')
 @login_required
 def get_users():
+    conn = None
     try:
-        cur = mysql.connection.cursor()
+        conn = get_db_connection()
+        cur = conn.cursor()
         cur.execute("""
             SELECT
                 u.id,
                 u.username,
                 COALESCE(m.membership_type, 'free') as membership_type,
                 COALESCE(SUM(s.score), 0) as total_score,
-                DATE_FORMAT(m.start_date, '%%Y-%%m-%%d %%H:%%i') as start_date
+                DATE_FORMAT(m.start_date, '%Y-%m-%d %H:%i') as start_date
             FROM users u
             LEFT JOIN members m ON u.id = m.user_id
             LEFT JOIN scores s ON u.id = s.user_id
@@ -150,19 +164,12 @@ def get_users():
         users = cur.fetchall()
         cur.close()
 
-        result = []
-        for user in users:
-            result.append({
-                'id': user[0],
-                'username': user[1],
-                'membership_type': user[2],
-                'total_score': user[3],
-                'start_date': user[4]
-            })
-
-        return jsonify(result), 200
+        return jsonify(users), 200
     except Exception as e:
         return jsonify({'message': f'获取用户列表失败: {str(e)}'}), 500
+    finally:
+        if conn:
+            conn.close()
 
 @app.route('/api/add-user', methods=['POST'])
 @login_required
@@ -175,8 +182,10 @@ def add_user():
     if not username or not password:
         return jsonify({'message': '用户名和密码不能为空'}), 400
 
+    conn = None
     try:
-        cur = mysql.connection.cursor()
+        conn = get_db_connection()
+        cur = conn.cursor()
 
         # 检查用户是否存在
         cur.execute("SELECT id FROM users WHERE username = %s", (username,))
@@ -191,46 +200,59 @@ def add_user():
         # 创建会员记录
         cur.execute("INSERT INTO members (user_id, membership_type) VALUES (%s, %s)", (user_id, membership_type))
 
-        mysql.connection.commit()
+        conn.commit()
         cur.close()
 
         return jsonify({'message': '用户添加成功'}), 200
     except Exception as e:
         return jsonify({'message': f'添加失败: {str(e)}'}), 500
+    finally:
+        if conn:
+            conn.close()
 
 @app.route('/api/user/score')
 @login_required
 def get_user_score():
+    conn = None
     try:
         user_id = session['user_id']
-        cur = mysql.connection.cursor()
-        cur.execute("SELECT COALESCE(SUM(score), 0) FROM scores WHERE user_id = %s", (user_id,))
-        total_score = cur.fetchone()[0]
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT COALESCE(SUM(score), 0) as total FROM scores WHERE user_id = %s", (user_id,))
+        result = cur.fetchone()
         cur.close()
-        return jsonify({'total_score': total_score}), 200
+        return jsonify({'total_score': result['total']}), 200
     except Exception as e:
         return jsonify({'message': f'获取积分失败: {str(e)}'}), 500
+    finally:
+        if conn:
+            conn.close()
 
 @app.route('/api/user/membership')
 @login_required
 def get_user_membership():
+    conn = None
     try:
         user_id = session['user_id']
-        cur = mysql.connection.cursor()
+        conn = get_db_connection()
+        cur = conn.cursor()
         cur.execute("SELECT membership_type, start_date, end_date FROM members WHERE user_id = %s", (user_id,))
         member = cur.fetchone()
         cur.close()
 
         if member:
             return jsonify({
-                'membership_type': member[0],
-                'start_date': str(member[1]) if member[1] else None,
-                'end_date': str(member[2]) if member[2] else None
+                'membership_type': member['membership_type'],
+                'start_date': str(member['start_date']) if member['start_date'] else None,
+                'end_date': str(member['end_date']) if member['end_date'] else None
             }), 200
         else:
             return jsonify({'membership_type': 'free'}), 200
     except Exception as e:
         return jsonify({'message': f'获取会员信息失败: {str(e)}'}), 500
+    finally:
+        if conn:
+            conn.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3002)
