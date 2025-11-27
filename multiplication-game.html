@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>乘法口诀表消消乐</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Comic Sans MS', '微软雅黑', sans-serif;
+        }
+        
+        body {
+            background-color: #e6f7ff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        header {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #3399ff;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            margin-top: 20px;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 80%;
+            max-width: 800px;
+            margin-bottom: 20px;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 10px 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 15px;
+            width: 80%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .bubble {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.3s ease;
+            box-shadow: 
+                inset 0 -8px 10px rgba(0, 0, 0, 0.2),
+                inset 0 8px 10px rgba(255, 255, 255, 0.5),
+                0 4px 8px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .bubble::after {
+            content: '';
+            position: absolute;
+            top: 10%;
+            left: 20%;
+            width: 30%;
+            height: 20%;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            transform: rotate(45deg);
+        }
+        
+        .bubble.selected {
+            transform: scale(1.1);
+            box-shadow: 
+                inset 0 -8px 10px rgba(0, 0, 0, 0.2),
+                inset 0 8px 10px rgba(255, 255, 255, 0.5),
+                0 0 15px 5px rgba(51, 153, 255, 0.7);
+        }
+        
+        .bubble.matched {
+            opacity: 0;
+            transform: scale(0);
+            pointer-events: none;
+        }
+        
+        .victory-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            color: white;
+            display: none;
+        }
+        
+        .victory-content {
+            background: linear-gradient(135deg, #3399ff, #66ccff);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 80%;
+        }
+        
+        .victory-content h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+        
+        .victory-content p {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+        }
+        
+        .continue-btn {
+            background-color: #ffcc00;
+            color: #333;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .continue-btn:hover {
+            background-color: #ffd633;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .game-board {
+                grid-template-columns: repeat(4, 1fr);
+                grid-template-rows: repeat(5, 1fr);
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .game-board {
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(6, 1fr);
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .bubble {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>乘法口诀表消消乐</h1>
+    </header>
+    
+    <div class="game-info">
+        <div class="timer">用时: <span id="time">00:00</span></div>
+        <div class="pairs">已配对: <span id="pairs">0</span>/10</div>
+    </div>
+    
+    <div class="game-board" id="gameBoard">
+        <!-- 泡泡将通过JavaScript动态生成 -->
+    </div>
+    
+    <div class="victory-screen" id="victoryScreen">
+        <div class="victory-content">
+            <h2>恭喜挑战成功！</h2>
+            <p>完成时间: <span id="finalTime">00:00</span></p>
+            <button class="continue-btn" id="continueBtn">继续挑战</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const gameBoard = document.getElementById('gameBoard');
+            const timeDisplay = document.getElementById('time');
+            const pairsDisplay = document.getElementById('pairs');
+            const victoryScreen = document.getElementById('victoryScreen');
+            const finalTimeDisplay = document.getElementById('finalTime');
+            const continueBtn = document.getElementById('continueBtn');
+            
+            let selectedBubble = null;
+            let matchedPairs = 0;
+            let totalPairs = 10;
+            let startTime;
+            let timerInterval;
+            
+            // 生成乘法口诀表配对
+            function generatePairs() {
+                const pairs = [];
+                
+                // 生成1-9的乘法口诀表
+                for (let i = 1; i <= 9; i++) {
+                    for (let j = i; j <= 9; j++) {
+                        pairs.push({
+                            question: `${i}×${j}`,
+                            answer: i * j
+                        });
+                    }
+                }
+                
+                // 随机选择10个不重复的配对
+                const selectedPairs = [];
+                while (selectedPairs.length < totalPairs && pairs.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * pairs.length);
+                    selectedPairs.push(pairs[randomIndex]);
+                    pairs.splice(randomIndex, 1);
+                }
+                
+                return selectedPairs;
+            }
+            
+            // 创建泡泡元素
+            function createBubbles(pairs) {
+                gameBoard.innerHTML = '';
+                
+                // 创建问题和答案的数组
+                const items = [];
+                pairs.forEach(pair => {
+                    items.push({
+                        type: 'question',
+                        value: pair.question,
+                        answer: pair.answer
+                    });
+                    items.push({
+                        type: 'answer',
+                        value: pair.answer.toString(),
+                        answer: pair.answer
+                    });
+                });
+                
+                // 随机排序
+                shuffleArray(items);
+                
+                // 创建泡泡
+                items.forEach(item => {
+                    const bubble = document.createElement('div');
+                    bubble.className = 'bubble';
+                    bubble.textContent = item.type === 'question' ? `${item.value}=?` : item.value;
+                    bubble.dataset.type = item.type;
+                    bubble.dataset.value = item.value;
+                    bubble.dataset.answer = item.answer;
+                    
+                    // 随机颜色
+                    const hue = Math.floor(Math.random() * 360);
+                    bubble.style.background = `linear-gradient(135deg, hsl(${hue}, 80%, 65%), hsl(${hue}, 80%, 45%))`;
+                    
+                    bubble.addEventListener('click', handleBubbleClick);
+                    gameBoard.appendChild(bubble);
+                });
+            }
+            
+            // 处理泡泡点击
+            function handleBubbleClick(e) {
+                const bubble = e.currentTarget;
+                
+                // 如果泡泡已经匹配，忽略点击
+                if (bubble.classList.contains('matched')) return;
+                
+                // 如果已经选中了一个泡泡
+                if (selectedBubble) {
+                    // 如果点击的是同一个泡泡，取消选择
+                    if (selectedBubble === bubble) {
+                        selectedBubble.classList.remove('selected');
+                        selectedBubble = null;
+                        return;
+                    }
+                    
+                    // 检查是否匹配
+                    const isMatch = checkMatch(selectedBubble, bubble);
+                    
+                    if (isMatch) {
+                        // 匹配成功
+                        setTimeout(() => {
+                            selectedBubble.classList.add('matched');
+                            bubble.classList.add('matched');
+                            selectedBubble = null;
+                            
+                            matchedPairs++;
+                            pairsDisplay.textContent = matchedPairs;
+                            
+                            // 检查是否完成游戏
+                            if (matchedPairs === totalPairs) {
+                                endGame();
+                            }
+                        }, 300);
+                    } else {
+                        // 匹配失败
+                        bubble.classList.add('selected');
+                        setTimeout(() => {
+                            selectedBubble.classList.remove('selected');
+                            bubble.classList.remove('selected');
+                            selectedBubble = null;
+                        }, 1000);
+                    }
+                } else {
+                    // 第一次选择泡泡
+                    bubble.classList.add('selected');
+                    selectedBubble = bubble;
+                }
+            }
+            
+            // 检查两个泡泡是否匹配
+            function checkMatch(bubble1, bubble2) {
+                // 确保一个是问题，一个是答案
+                if (bubble1.dataset.type === bubble2.dataset.type) return false;
+                
+                // 获取问题和答案泡泡
+                const questionBubble = bubble1.dataset.type === 'question' ? bubble1 : bubble2;
+                const answerBubble = bubble1.dataset.type === 'answer' ? bubble1 : bubble2;
+                
+                // 检查答案是否正确
+                return parseInt(questionBubble.dataset.answer) === parseInt(answerBubble.dataset.value);
+            }
+            
+            // 数组随机排序
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+            
+            // 开始游戏
+            function startGame() {
+                matchedPairs = 0;
+                pairsDisplay.textContent = matchedPairs;
+                selectedBubble = null;
+                
+                // 生成配对并创建泡泡
+                const pairs = generatePairs();
+                createBubbles(pairs);
+                
+                // 开始计时
+                startTime = new Date();
+                clearInterval(timerInterval);
+                timerInterval = setInterval(updateTimer, 1000);
+                
+                // 隐藏胜利界面
+                victoryScreen.style.display = 'none';
+            }
+            
+            // 更新计时器
+            function updateTimer() {
+                const currentTime = new Date();
+                const elapsedTime = Math.floor((currentTime - startTime) / 1000);
+                const minutes = Math.floor(elapsedTime / 60).toString().padStart(2, '0');
+                const seconds = (elapsedTime % 60).toString().padStart(2, '0');
+                timeDisplay.textContent = `${minutes}:${seconds}`;
+            }
+            
+            // 结束游戏
+            function endGame() {
+                clearInterval(timerInterval);
+                finalTimeDisplay.textContent = timeDisplay.textContent;
+                victoryScreen.style.display = 'flex';
+            }
+            
+            // 继续挑战按钮事件
+            continueBtn.addEventListener('click', startGame);
+            
+            // 初始化游戏
+            startGame();
+        });
+    </script>
+</body>
+</html>
