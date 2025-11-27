@@ -1,0 +1,5 @@
+MYSQL_HOST = 'localhost'
+MYSQL_USER = 'root'
+MYSQL_PASSWORD = '89175eff68b9ba4f'
+MYSQL_DB = 'learning_games'
+SECRET_KEY = 'your-secret-key-here'
