@@ -14,14 +14,14 @@
         position: relative;
         width: 100vw;
         height: 100vh;
-        background: url('https://i.imgur.com/6B1s2Se.png');
+        background: url('/static/images/pvz/background.png');
         background-size: cover;
         overflow: hidden;
     }
     .monster {
         position: absolute;
-        width: 120px;
-        height: auto;
+        width: auto;
+        height: 100vh;
         transition: transform 0.2s;
     }
     @keyframes fly {
@@ -57,7 +57,7 @@
         position: absolute;
         width: 30px;
         height: 30px;
-        background: url('https://i.imgur.com/YpJQp2Q.png');
+        background: url('/static/images/pvz/bullet.png');
         background-size: cover;
     }
     #questionBox {
@@ -82,9 +82,9 @@
 
 <script>
 const monsters = [
-    { img: "https://i.imgur.com/NbPEUj1.png", speed: 1.5 }, // 小恐龙
-    { img: "https://i.imgur.com/ugzx9UK.png", speed: 1.2 }, // 霸王龙
-    { img: "https://i.imgur.com/yw8Z0fr.png", speed: 2.0 }, // 翼龙（飞行）
+    { img: "/static/images/pvz/monster1.png", speed: (window.innerWidth - 150) / (10 * 60) }, // 10秒
+    { img: "/static/images/pvz/monster2.png", speed: (window.innerWidth - 150) / (10 * 60) }, // 10秒
+    { img: "/static/images/pvz/monster3.png", speed: (window.innerWidth - 150) / (10 * 60) }, // 10秒
 ];
 
 let currentMonster = null;
@@ -123,7 +123,8 @@ function spawnMonster() {
     img.src = m.img;
     img.className = "monster";
     img.style.left = monsterX + "px";
-    img.style.top = "60%";
+    img.style.top = "0";
+    img.style.bottom = "0";
 
     img.dataset.speed = m.speed;
 
