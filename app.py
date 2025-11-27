@@ -1,12 +1,13 @@
-from flask import Flask, send_file, jsonify, request, session, redirect
+from flask import Flask, render_template, jsonify, request, session, redirect
 import pymysql
 import hashlib
 from functools import wraps
 import config
 import json
 import os
+import random
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = config.SECRET_KEY
 
 WORD_LIST_FILE = 'word_list.json'
@@ -27,7 +28,8 @@ def get_db_connection():
 
 # 游戏列表配置
 GAMES = [
-    {'name': '消消乐', 'route': '/multiplication-game', 'file': 'multiplication-game.html'}
+    {'name': '字字大冒险', 'route': '/word-quest', 'file': 'word-quest.html'},
+    {'name': '乘法口诀表消消乐', 'route': '/multiplication-game', 'file': 'multiplication-game.html'}
 ]
 
 # 登录验证装饰器
@@ -45,23 +47,29 @@ def login_required(f):
 def index():
     if 'user_id' not in session:
         return redirect('/login')
-    return send_file('index.html')
+    return render_template('index.html', games=GAMES)
 
 @app.route('/login')
 def login_page():
-    return send_file('login.html')
+    return render_template('login.html')
 
 @app.route('/user-management')
 def user_management():
     if 'user_id' not in session:
         return redirect('/login')
-    return send_file('user-management.html')
+    return render_template('user-management.html')
+
+@app.route('/word-quest')
+def word_quest():
+    if 'user_id' not in session:
+        return redirect('/login')
+    return render_template('word-quest.html')
 
 @app.route('/multiplication-game')
 def multiplication_game():
     if 'user_id' not in session:
         return redirect('/login')
-    return send_file('multiplication-game.html')
+    return render_template('multiplication-game.html')
 
 # API路由
 @app.route('/api/register', methods=['POST'])
@@ -342,7 +350,51 @@ def save_words():
 @app.route('/admin')
 def admin_page():
     """词库管理页面"""
-    return send_file('static/admin.html')
+    return render_template('admin.html')
+
+# 字字大冒险游戏 API
+def load_word_list():
+    """加载词库"""
+    try:
+        with open(WORD_LIST_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def make_display(word, missing):
+    """生成带下划线的显示文本"""
+    idx = word.find(missing)
+    if idx == -1:
+        return word[0] + '_' + word[1:]
+    return word[:idx] + '_' + word[idx+len(missing):]
+
+@app.route('/start')
+def start_word_quest():
+    """开始字字大冒险游戏"""
+    words = load_word_list()
+    total = min(40, len(words))
+    if total == 0:
+        return jsonify({'rounds': []}), 200
+    
+    samples = random.sample(words, total)
+    rounds = []
+    
+    for i in range(0, total, 4):
+        group = samples[i:i+4]
+        items = []
+        for it in group:
+            display = make_display(it['word'], it.get('missing', ''))
+            items.append({
+                'word': it['word'],
+                'missing': it.get('missing', ''),
+                'type': it.get('type', 'en'),
+                'display': display
+            })
+        answers = [it['missing'] for it in group]
+        random.shuffle(answers)
+        rounds.append({'items': items, 'answers': answers})
+    
+    return jsonify({'rounds': rounds}), 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=3002)
+    app.run(host='0.0.0.0', port=3002, debug=True)
