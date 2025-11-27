@@ -1,11 +1,15 @@
 from flask import Flask, send_file, jsonify, request, session, redirect
 import pymysql
-from werkzeug.security import generate_password_hash, check_password_hash
+import hashlib
 from functools import wraps
 import config
 
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
+
+# 密码加密函数
+def hash_password(password):
+    return hashlib.md5(password.encode()).hexdigest()
 
 # 数据库连接函数
 def get_db_connection():
@@ -61,9 +65,13 @@ def register():
     data = request.json
     username = data.get('username')
     password = data.get('password')
+    role = data.get('role', 'user')  # 默认为普通用户
 
     if not username or not password:
         return jsonify({'message': '用户名和密码不能为空'}), 400
+
+    if role not in ['admin', 'user']:
+        return jsonify({'message': '角色类型错误'}), 400
 
     conn = None
     try:
@@ -73,11 +81,13 @@ def register():
         # 检查用户是否存在
         cur.execute("SELECT id FROM users WHERE username = %s", (username,))
         if cur.fetchone():
+            cur.close()
             return jsonify({'message': '用户名已存在'}), 400
 
         # 创建用户
-        hashed_password = generate_password_hash(password)
-        cur.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, hashed_password))
+        hashed_password = hash_password(password)
+        cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
+                   (username, hashed_password, role))
         user_id = cur.lastrowid
 
         # 创建会员记录
@@ -89,9 +99,15 @@ def register():
         # 自动登录
         session['user_id'] = user_id
         session['username'] = username
+        session['role'] = role
 
-        return jsonify({'message': '注册成功'}), 200
+        return jsonify({'message': '注册成功', 'user_id': user_id, 'role': role}), 200
     except Exception as e:
+        if conn:
+            conn.rollback()
+        print(f"注册错误: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'message': f'注册失败: {str(e)}'}), 500
     finally:
         if conn:
@@ -110,14 +126,23 @@ def login():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT id, password FROM users WHERE username = %s", (username,))
+        cur.execute("SELECT id, password, role FROM users WHERE username = %s", (username,))
         user = cur.fetchone()
         cur.close()
 
-        if user and check_password_hash(user['password'], password):
+        if user and user['password'] == hash_password(password):
             session['user_id'] = user['id']
             session['username'] = username
-            return jsonify({'message': '登录成功'}), 200
+            session['role'] = user['role']
+
+            # 根据角色返回不同的跳转路径
+            redirect_url = '/user-management' if user['role'] == 'admin' else '/'
+
+            return jsonify({
+                'message': '登录成功',
+                'role': user['role'],
+                'redirect': redirect_url
+            }), 200
         else:
             return jsonify({'message': '用户名或密码错误'}), 401
     except Exception as e:
@@ -134,7 +159,11 @@ def logout():
 @app.route('/api/check-auth')
 @login_required
 def check_auth():
-    return jsonify({'user_id': session['user_id'], 'username': session['username']}), 200
+    return jsonify({
+        'user_id': session['user_id'],
+        'username': session['username'],
+        'role': session.get('role', 'user')
+    }), 200
 
 @app.route('/api/games')
 @login_required
@@ -152,13 +181,14 @@ def get_users():
             SELECT
                 u.id,
                 u.username,
+                u.role,
                 COALESCE(m.membership_type, 'free') as membership_type,
                 COALESCE(SUM(s.score), 0) as total_score,
                 DATE_FORMAT(m.start_date, '%Y-%m-%d %H:%i') as start_date
             FROM users u
             LEFT JOIN members m ON u.id = m.user_id
             LEFT JOIN scores s ON u.id = s.user_id
-            GROUP BY u.id, u.username, m.membership_type, m.start_date
+            GROUP BY u.id, u.username, u.role, m.membership_type, m.start_date
             ORDER BY u.id
         """)
         users = cur.fetchall()
@@ -178,9 +208,13 @@ def add_user():
     username = data.get('username')
     password = data.get('password')
     membership_type = data.get('membership_type', 'free')
+    role = data.get('role', 'user')  # 添加角色字段
 
     if not username or not password:
         return jsonify({'message': '用户名和密码不能为空'}), 400
+
+    if role not in ['admin', 'user']:
+        return jsonify({'message': '角色类型错误'}), 400
 
     conn = None
     try:
@@ -193,8 +227,9 @@ def add_user():
             return jsonify({'message': '用户名已存在'}), 400
 
         # 创建用户
-        hashed_password = generate_password_hash(password)
-        cur.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, hashed_password))
+        hashed_password = hash_password(password)
+        cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
+                   (username, hashed_password, role))
         user_id = cur.lastrowid
 
         # 创建会员记录

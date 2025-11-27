@@ -194,7 +194,8 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    window.location.href = '/';
+                    // 根据后端返回的 redirect 路径跳转
+                    window.location.href = data.redirect || '/';
                 } else {
                     errorMsg.textContent = data.message || '登录失败';
                     errorMsg.style.display = 'block';
@@ -236,7 +237,8 @@
                     successMsg.textContent = '注册成功！正在跳转...';
                     successMsg.style.display = 'block';
                     setTimeout(() => {
-                        window.location.href = '/';
+                        // 根据注册返回的角色跳转
+                        window.location.href = data.redirect || '/';
                     }, 1500);
                 } else {
                     errorMsg.textContent = data.message || '注册失败';

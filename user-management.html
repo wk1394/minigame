@@ -76,7 +76,7 @@
 
         .add-user-form {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr auto;
+            grid-template-columns: 1fr 1fr 1fr 1fr auto;
             gap: 15px;
             margin-bottom: 20px;
         }
@@ -186,6 +186,10 @@
             <form class="add-user-form" id="addUserForm">
                 <input type="text" id="newUsername" placeholder="用户名" required>
                 <input type="password" id="newPassword" placeholder="密码" required>
+                <select id="newRole">
+                    <option value="user">普通用户</option>
+                    <option value="admin">管理员</option>
+                </select>
                 <select id="newMemberType">
                     <option value="free">普通会员</option>
                     <option value="vip">VIP会员</option>
@@ -201,13 +205,14 @@
                     <tr>
                         <th>ID</th>
                         <th>用户名</th>
+                        <th>角色</th>
                         <th>会员类型</th>
                         <th>游戏积分</th>
                         <th>注册时间</th>
                     </tr>
                 </thead>
                 <tbody id="userTableBody">
-                    <tr><td colspan="5" style="text-align:center;">加载中...</td></tr>
+                    <tr><td colspan="6" style="text-align:center;">加载中...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -233,7 +238,7 @@
                 const tbody = document.getElementById('userTableBody');
 
                 if (users.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">暂无用户</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">暂无用户</td></tr>';
                     return;
                 }
 
@@ -241,6 +246,7 @@
                     <tr>
                         <td>${user.id}</td>
                         <td>${user.username}</td>
+                        <td><span class="badge badge-${user.role === 'admin' ? 'vip' : 'free'}">${user.role === 'admin' ? '管理员' : '用户'}</span></td>
                         <td><span class="badge badge-${user.membership_type}">${user.membership_type === 'vip' ? 'VIP' : '普通'}</span></td>
                         <td>${user.total_score || 0}</td>
                         <td>${user.start_date || '-'}</td>
@@ -256,13 +262,14 @@
 
             const username = document.getElementById('newUsername').value;
             const password = document.getElementById('newPassword').value;
+            const role = document.getElementById('newRole').value;
             const membershipType = document.getElementById('newMemberType').value;
 
             try {
                 const response = await fetch('/api/add-user', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({username, password, membership_type: membershipType})
+                    body: JSON.stringify({username, password, role, membership_type: membershipType})
                 });
 
                 const data = await response.json();
