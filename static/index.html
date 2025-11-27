@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>字字大冒险 · Word Quest</title>
+  <style>
+    :root{--bg:#e8f5ff;--card:#ffffff;--accent:#ffcc33;--ok:#4CAF50;--err:#F44336}
+    html,body{height:100%;margin:0;font-family:Helvetica, Arial, sans-serif;background:linear-gradient(180deg,#dff3ff,#fff);}
+    .container{max-width:1100px;margin:20px auto;padding:16px}
+    .header{display:flex;align-items:center;justify-content:space-between}
+    h1{margin:0;font-size:28px;color:#333}
+    .controls{display:flex;gap:10px}
+    button{border:0;padding:10px 16px;border-radius:12px;background:#4aa3ff;color:#fff;cursor:pointer}
+    button.secondary{background:#9fbffb;color:#123}
+
+    .game-area{display:flex;margin-top:18px;gap:18px}
+    .left,.right{background:var(--card);border-radius:14px;padding:14px;box-shadow:0 6px 14px rgba(0,0,0,0.06)}
+    .left{flex:1;min-height:360px}
+    .right{width:260px}
+
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .progress{height:12px;background:#eee;border-radius:8px;overflow:hidden;width:55%}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,#ffcf6b,#ff9a6b);width:0%}
+    .timer{font-weight:700;color:#333}
+
+    .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    .card{background:linear-gradient(180deg,#fff,#f8fdff);padding:12px;border-radius:12px;border:2px solid rgba(0,0,0,0.04);min-height:84px;display:flex;align-items:center;justify-content:center;font-size:22px;position:relative}
+    .card .missing{display:inline-block;padding:6px 10px;border-radius:8px;background:#f0f8ff;min-width:48px;text-align:center}
+    .card.correct{border-color:var(--ok);box-shadow:0 6px 18px rgba(76,175,80,0.12)}
+    .card.wrong{border-color:var(--err)}
+
+    .answers{display:flex;flex-direction:column;gap:12px}
+    .answer{padding:12px;border-radius:12px;background:linear-gradient(180deg,#fff,#f7fbff);text-align:center;cursor:pointer;border:2px solid rgba(0,0,0,0.04);font-weight:700}
+    .answer.dragging{opacity:0.6}
+    .answer.used{opacity:0.4}
+
+    .footer{display:flex;gap:12px;justify-content:center;margin-top:18px}
+    .small{font-size:12px;color:#666}
+
+    /* animations */
+    @keyframes pop {0%{transform:scale(0.6);opacity:0}100%{transform:scale(1);opacity:1}}
+    .pop{animation:pop .25s ease}
+
+    .shake{animation:shake .45s}
+    @keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}100%{transform:translateX(0)}}
+
+    .centered-overlay{position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center}
+    .dialog{background:#fff;padding:22px;border-radius:14px;min-width:320px}
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>字字大冒险 · Word Quest</h1>
+      <div class="controls">
+        <button id="btnStart">开始游戏</button>
+        <button id="btnReset" class="secondary">重置</button>
+        <button id="btnUpload" class="secondary">上传词库</button>
+      </div>
+    </div>
+
+    <div class="game-area">
+      <div class="left">
+        <div class="topbar">
+          <div class="progress" title="进度">
+            <i id="progressBar"></i>
+          </div>
+          <div class="timer" id="timer">--s</div>
+        </div>
+
+        <div class="cards" id="cards">
+          <!-- 4 cards -->
+        </div>
+
+        <div class="footer small">
+          <div id="combo">连对：0</div>
+          <div id="roundInfo">第 0 / 10 轮</div>
+        </div>
+      </div>
+
+      <div class="right">
+        <h3 style="margin-top:0">答案选择</h3>
+        <div class="answers" id="answers">
+          <!-- 4 answers -->
+        </div>
+        <div style="margin-top:12px" class="small">拖动或点击答案到题卡的空白处，时间到或错误则本轮失败。</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- overlay result -->
+  <div id="overlay" style="display:none" class="centered-overlay">
+    <div class="dialog" id="dialog">
+      <div id="dialogText">通关！</div>
+      <div style="margin-top:12px;text-align:right">
+        <button id="nextBtn">下一轮</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 全局状态
+    let rounds = [];
+    let curRound = 0;
+    let timer = null;
+    let timeLeft = 18; // 每轮计时秒数
+    let combo = 0;
+    let totalRounds = 0;
+
+    const $cards = document.getElementById('cards');
+    const $answers = document.getElementById('answers');
+    const $timer = document.getElementById('timer');
+    const $progressBar = document.getElementById('progressBar');
+    const $combo = document.getElementById('combo');
+    const $roundInfo = document.getElementById('roundInfo');
+    const $overlay = document.getElementById('overlay');
+    const $dialogText = document.getElementById('dialogText');
+    const $nextBtn = document.getElementById('nextBtn');
+
+    document.getElementById('btnStart').addEventListener('click', startGame);
+    document.getElementById('btnReset').addEventListener('click', resetGame);
+    document.getElementById('nextBtn').addEventListener('click', ()=>{hideOverlay(); nextRound()});
+
+    // Fetch rounds from backend
+    async function startGame(){
+      try{
+        const res = await fetch('/start');
+        const data = await res.json();
+        rounds = data.rounds || [];
+        totalRounds = rounds.length;
+        curRound = 0;
+        combo = 0;
+        renderRound();
+      }catch(e){
+        alert('无法连接后端 /start 接口，请检查服务是否启动。');
+        console.error(e);
+      }
+    }
+
+    function resetGame(){
+      rounds = [];curRound=0;combo=0;updateUIEmpty();
+    }
+
+    function updateUIEmpty(){
+      $cards.innerHTML='';$answers.innerHTML='';$timer.textContent='--s';$progressBar.style.width='0%';$roundInfo.textContent='第 0 / 10 轮';$combo.textContent='连对：0';
+    }
+
+    function renderRound(){
+      if(curRound>=totalRounds){
+        showOverlay('全部完成！恭喜你 🎉', false);
+        return;
+      }
+      const round = rounds[curRound];
+      $cards.innerHTML=''; $answers.innerHTML='';
+      $roundInfo.textContent = `第 ${curRound+1} / ${totalRounds} 轮`;
+
+      // render cards
+      round.items.forEach((it, idx)=>{
+        const div = document.createElement('div');
+        div.className='card pop';
+        div.dataset.index = idx;
+        div.dataset.missing = it.missing;
+        div.innerHTML = `<div>${escapeHtml(it.display)}</div>`;
+        // allow drop
+        div.addEventListener('dragover', (e)=>e.preventDefault());
+        div.addEventListener('drop', onCardDrop);
+        div.addEventListener('click', ()=>onCardClick(div));
+        $cards.appendChild(div);
+      });
+
+      // render answers
+      round.answers.forEach((ans, idx)=>{
+        const a = document.createElement('div');
+        a.className='answer pop';
+        a.draggable = true;
+        a.dataset.value = ans;
+        a.textContent = ans || '(空)';
+        a.addEventListener('dragstart', onDragStart);
+        a.addEventListener('dragend', onDragEnd);
+        a.addEventListener('click', ()=>onAnswerClick(a));
+        $answers.appendChild(a);
+      });
+
+      // reset timer
+      startTimer(timeLeft);
+      updateProgress();
+    }
+
+    function onDragStart(e){
+      e.dataTransfer.setData('text/plain', e.target.dataset.value);
+      e.target.classList.add('dragging');
+    }
+    function onDragEnd(e){
+      e.target.classList.remove('dragging');
+    }
+
+    function onCardDrop(e){
+      e.preventDefault();
+      const val = e.dataTransfer.getData('text/plain');
+      const card = e.currentTarget;
+      tryMatch(card, val);
+    }
+
+    // 点击题卡后，再点答案的交互
+    let _selectedCard = null;
+    function onCardClick(card){
+      // 选中卡片
+      clearCardSelection();
+      _selectedCard = card;
+      card.style.boxShadow = '0 8px 18px rgba(0,0,0,0.12)';
+    }
+    function clearCardSelection(){
+      document.querySelectorAll('.card').forEach(c=>c.style.boxShadow='');
+      _selectedCard = null;
+    }
+
+    function onAnswerClick(answer){
+      if(_selectedCard){
+        tryMatch(_selectedCard, answer.dataset.value, answer);
+      }
+    }
+
+    function tryMatch(card, val, answerElem=null){
+      const missing = card.dataset.missing;
+      if(val === missing){
+        // correct
+        card.classList.add('correct');
+        card.innerHTML = `<div>${escapeHtml(card.textContent.replace('_', val))}</div>`;
+        if(answerElem) answerElem.classList.add('used');
+        else {
+          // find the answer element with this value and mark used
+          document.querySelectorAll('.answer').forEach(a=>{ if(a.dataset.value===val) a.classList.add('used') });
+        }
+        // disable interactions for this card
+        card.removeEventListener('click', ()=>onCardClick(card));
+        card.removeEventListener('drop', onCardDrop);
+        checkRoundComplete();
+      }else{
+        // wrong
+        card.classList.add('wrong');
+        card.classList.add('shake');
+        setTimeout(()=>{card.classList.remove('shake');card.classList.remove('wrong')},450);
+        // fail round
+        failRound('配对错误，挑战失败！');
+      }
+      clearCardSelection();
+    }
+
+    function checkRoundComplete(){
+      const remaining = document.querySelectorAll('.card:not(.correct)').length;
+      if(remaining===0){
+        // success
+        combo += 1;
+        $combo.textContent = `连对：${combo}`;
+        // small reward: +1s if combo multiple of 5
+        if(combo>0 && combo%5===0) timeLeft += 1;
+        showOverlay('本轮通过！继续下一轮？', true);
+        stopTimer();
+      }
+    }
+
+    function failRound(msg){
+      combo = 0; $combo.textContent = `连对：${combo}`;
+      stopTimer();
+      showOverlay(msg, false);
+      // 2秒后自动重置游戏
+      setTimeout(()=>{
+        hideOverlay();
+        resetGame();
+      }, 2000);
+    }
+
+    function startTimer(sec){
+      stopTimer();
+      let t = sec;
+      $timer.textContent = `${t}s`;
+      timer = setInterval(()=>{
+        t -= 1;
+        $timer.textContent = `${t}s`;
+        if(t<=3) $timer.style.color = '#F44336'; else $timer.style.color='#333';
+        if(t<=0){
+          stopTimer();
+          failRound('时间到，本轮失败');
+        }
+      },1000);
+    }
+    function stopTimer(){ if(timer) clearInterval(timer); timer=null; }
+
+    function updateProgress(){
+      const pct = totalRounds===0?0:((curRound)/totalRounds)*100;
+      $progressBar.style.width = pct + '%';
+    }
+
+    function showOverlay(text, ok){
+      $dialogText.textContent = text;
+      $overlay.style.display = 'flex';
+      $nextBtn.style.display = ok? 'inline-block' : 'none';
+    }
+    function hideOverlay(){ $overlay.style.display = 'none'; }
+
+    function nextRound(){
+      curRound += 1;
+      if(curRound>=totalRounds){
+        showOverlay('全部轮次结束，游戏结束 🎉', false);
+        // 2秒后自动重置游戏
+        setTimeout(()=>{
+          hideOverlay();
+          resetGame();
+        }, 2000);
+        return;
+      }
+      renderRound();
+      updateProgress();
+    }
+
+    // 辅助：转义 HTML
+    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+    // allow clicking answer to assign to previously selected card
+    // also add keyboard accessibility: numbers 1-4 select answers
+    document.addEventListener('keydown', (e)=>{
+      if(e.key>='1' && e.key<='4'){
+        const idx = Number(e.key)-1;
+        const ans = document.querySelectorAll('.answer')[idx];
+        if(ans){ ans.click(); }
+      }
+    });
+
+    // upload词库前端占位（仅UI）
+    document.getElementById('btnUpload').addEventListener('click', ()=>{
+      alert('后端上传词库功能尚未实现。如果需要，我可以帮你扩展 Flask 后端，增加上传并保存 wordlist.json 的接口和管理页面。');
+    });
+
+  </script>
+</body>
+</html>

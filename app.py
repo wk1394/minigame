@@ -3,9 +3,13 @@ import pymysql
 import hashlib
 from functools import wraps
 import config
+import json
+import os
 
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
+
+WORD_LIST_FILE = 'word_list.json'
 
 # 密码加密函数
 def hash_password(password):
@@ -288,6 +292,57 @@ def get_user_membership():
     finally:
         if conn:
             conn.close()
+
+# 词库管理 API
+@app.route('/api/words', methods=['GET'])
+def get_words():
+    """获取词库"""
+    try:
+        if os.path.exists(WORD_LIST_FILE):
+            with open(WORD_LIST_FILE, 'r', encoding='utf-8') as f:
+                words = json.load(f)
+            return jsonify(words), 200
+        else:
+            return jsonify([]), 200
+    except Exception as e:
+        return jsonify({'message': f'读取词库失败: {str(e)}'}), 500
+
+@app.route('/api/words', methods=['POST'])
+def save_words():
+    """保存词库（增删改）"""
+    try:
+        words = request.json
+        
+        if not isinstance(words, list):
+            return jsonify({'message': '数据格式错误'}), 400
+        
+        # 验证词库数量限制
+        if len(words) > 40:
+            return jsonify({'message': '词库最多只能有40个单词'}), 400
+        
+        # 验证每个单词的格式
+        for word in words:
+            if not isinstance(word, dict):
+                return jsonify({'message': '单词格式错误'}), 400
+            if 'word' not in word or 'missing' not in word or 'type' not in word:
+                return jsonify({'message': '单词必须包含 word、missing 和 type 字段'}), 400
+            if word['type'] not in ['en', 'cn']:
+                return jsonify({'message': 'type 必须是 en 或 cn'}), 400
+            if word['missing'] not in word['word']:
+                return jsonify({'message': f'缺失字符"{word["missing"]}"必须在单词"{word["word"]}"中'}), 400
+        
+        # 保存到文件
+        with open(WORD_LIST_FILE, 'w', encoding='utf-8') as f:
+            json.dump(words, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'message': '保存成功'}), 200
+    except Exception as e:
+        return jsonify({'message': f'保存失败: {str(e)}'}), 500
+
+@app.route('/admin')
+def admin_page():
+    """词库管理页面"""
+    return send_file('static/admin.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3002)

@@ -1,0 +1,47 @@
+[
+  {
+    "missing": "a",
+    "type": "en",
+    "word": "apple"
+  },
+  {
+    "missing": "ba",
+    "type": "en",
+    "word": "banana"
+  },
+  {
+    "missing": "a",
+    "type": "en",
+    "word": "cat"
+  },
+  {
+    "missing": "o",
+    "type": "en",
+    "word": "dog"
+  },
+  {
+    "missing": "国",
+    "type": "cn",
+    "word": "中国"
+  },
+  {
+    "missing": "习",
+    "type": "cn",
+    "word": "学习"
+  },
+  {
+    "missing": "苹",
+    "type": "cn",
+    "word": "苹果"
+  },
+  {
+    "missing": "师",
+    "type": "cn",
+    "word": "老师"
+  },
+  {
+    "word": "公告",
+    "missing": "公",
+    "type": "cn"
+  }
+]

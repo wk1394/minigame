@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<title>词库管理后台</title>
+<style>
+body {
+font-family: Arial, sans-serif;
+background: #f6f6f6;
+padding: 20px;
+}
+h2 {
+margin-bottom: 10px;
+}
+.card {
+background: #fff;
+padding: 20px;
+border-radius: 8px;
+box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+max-width: 1000px;
+margin: 0 auto;
+}
+.header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 20px;
+}
+.word-count {
+color: #666;
+font-size: 14px;
+}
+.word-count.warning {
+color: #ff9800;
+font-weight: bold;
+}
+.word-count.limit {
+color: #f44336;
+font-weight: bold;
+}
+.add-section {
+background: #f0f8ff;
+padding: 15px;
+border-radius: 8px;
+margin-bottom: 20px;
+}
+.form-group {
+display: flex;
+gap: 10px;
+align-items: center;
+flex-wrap: wrap;
+}
+.form-group input, .form-group select {
+padding: 8px 12px;
+border: 1px solid #ddd;
+border-radius: 5px;
+font-size: 14px;
+}
+.form-group input[type="text"] {
+flex: 1;
+min-width: 150px;
+}
+button {
+padding: 8px 16px;
+background: #007bff;
+color: #fff;
+border: none;
+border-radius: 5px;
+cursor: pointer;
+font-size: 14px;
+}
+button:hover {
+background: #0056c1;
+}
+button:disabled {
+background: #ccc;
+cursor: not-allowed;
+}
+button.danger {
+background: #f44336;
+}
+button.danger:hover {
+background: #d32f2f;
+}
+button.secondary {
+background: #6c757d;
+}
+button.secondary:hover {
+background: #5a6268;
+}
+.word-list {
+margin-top: 20px;
+}
+.word-item {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 12px;
+border: 1px solid #e0e0e0;
+border-radius: 6px;
+margin-bottom: 10px;
+background: #fafafa;
+}
+.word-item:hover {
+background: #f0f0f0;
+}
+.word-info {
+flex: 1;
+display: flex;
+gap: 20px;
+align-items: center;
+}
+.word-field {
+display: flex;
+flex-direction: column;
+}
+.word-field label {
+font-size: 11px;
+color: #666;
+margin-bottom: 2px;
+}
+.word-field span {
+font-size: 14px;
+font-weight: 500;
+}
+.word-actions {
+display: flex;
+gap: 8px;
+}
+.word-actions button {
+padding: 6px 12px;
+font-size: 13px;
+}
+.edit-mode {
+background: #fff3e0 !important;
+border-color: #ff9800;
+}
+.edit-mode .word-field input {
+padding: 4px 8px;
+border: 1px solid #ff9800;
+border-radius: 3px;
+font-size: 14px;
+}
+.message {
+padding: 10px 15px;
+border-radius: 5px;
+margin-bottom: 15px;
+display: none;
+}
+.message.success {
+background: #d4edda;
+color: #155724;
+border: 1px solid #c3e6cb;
+}
+.message.error {
+background: #f8d7da;
+color: #721c24;
+border: 1px solid #f5c6cb;
+}
+.message.show {
+display: block;
+}
+</style>
+</head>
+<body>
+<div class="card">
+<div class="header">
+<h2>词库管理后台</h2>
+<div class="word-count" id="wordCount">词库：0 / 40</div>
+</div>
+
+<div id="message" class="message"></div>
+
+<div class="add-section">
+<h3 style="margin-top: 0;">添加新单词</h3>
+<div class="form-group">
+<input type="text" id="newWord" placeholder="单词（如：apple）" />
+<input type="text" id="newMissing" placeholder="缺失字符（如：a）" />
+<select id="newType">
+<option value="en">英文</option>
+<option value="cn">中文</option>
+</select>
+<button id="addBtn" onclick="addWord()">添加</button>
+</div>
+</div>
+
+<div class="word-list">
+<h3>词库列表</h3>
+<div id="wordList">加载中...</div>
+</div>
+</div>
+
+<script>
+let words = [];
+let editingIndex = -1;
+
+// 加载词库
+async function loadWords() {
+  try {
+    const res = await fetch('/api/words');
+    words = await res.json();
+    renderWords();
+    updateWordCount();
+  } catch (err) {
+    showMessage('加载失败：' + err, 'error');
+  }
+}
+
+// 渲染词库列表
+function renderWords() {
+  const list = document.getElementById('wordList');
+  if (words.length === 0) {
+    list.innerHTML = '<p style="color: #999;">词库为空，请添加单词</p>';
+    return;
+  }
+
+  list.innerHTML = words.map((w, idx) => `
+    <div class="word-item" id="word-${idx}">
+      <div class="word-info">
+        <div class="word-field">
+          <label>单词</label>
+          <span class="word-text">${escapeHtml(w.word)}</span>
+        </div>
+        <div class="word-field">
+          <label>缺失字符</label>
+          <span class="missing-text">${escapeHtml(w.missing)}</span>
+        </div>
+        <div class="word-field">
+          <label>类型</label>
+          <span class="type-text">${w.type === 'en' ? '英文' : '中文'}</span>
+        </div>
+      </div>
+      <div class="word-actions">
+        <button class="secondary" onclick="editWord(${idx})">编辑</button>
+        <button class="danger" onclick="deleteWord(${idx})">删除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// 更新词库数量显示
+function updateWordCount() {
+  const countElem = document.getElementById('wordCount');
+  const count = words.length;
+  countElem.textContent = `词库：${count} / 40`;
+  
+  if (count >= 40) {
+    countElem.className = 'word-count limit';
+    document.getElementById('addBtn').disabled = true;
+  } else if (count >= 35) {
+    countElem.className = 'word-count warning';
+    document.getElementById('addBtn').disabled = false;
+  } else {
+    countElem.className = 'word-count';
+    document.getElementById('addBtn').disabled = false;
+  }
+}
+
+// 添加单词
+async function addWord() {
+  const word = document.getElementById('newWord').value.trim();
+  const missing = document.getElementById('newMissing').value.trim();
+  const type = document.getElementById('newType').value;
+
+  if (!word || !missing) {
+    showMessage('请填写单词和缺失字符', 'error');
+    return;
+  }
+
+  if (words.length >= 40) {
+    showMessage('词库已达到上限（40个单词）', 'error');
+    return;
+  }
+
+  // 检查是否已存在
+  if (words.some(w => w.word === word)) {
+    showMessage('该单词已存在', 'error');
+    return;
+  }
+
+  // 验证缺失字符是否在单词中
+  if (!word.includes(missing)) {
+    showMessage('缺失字符必须是单词的一部分', 'error');
+    return;
+  }
+
+  words.push({ word, missing, type });
+  await saveWords();
+  
+  // 清空输入
+  document.getElementById('newWord').value = '';
+  document.getElementById('newMissing').value = '';
+  showMessage('添加成功', 'success');
+}
+
+// 编辑单词
+function editWord(idx) {
+  if (editingIndex !== -1) {
+    cancelEdit();
+  }
+
+  editingIndex = idx;
+  const item = document.getElementById(`word-${idx}`);
+  const w = words[idx];
+  
+  item.classList.add('edit-mode');
+  item.innerHTML = `
+    <div class="word-info">
+      <div class="word-field">
+        <label>单词</label>
+        <input type="text" id="edit-word" value="${escapeHtml(w.word)}" />
+      </div>
+      <div class="word-field">
+        <label>缺失字符</label>
+        <input type="text" id="edit-missing" value="${escapeHtml(w.missing)}" />
+      </div>
+      <div class="word-field">
+        <label>类型</label>
+        <select id="edit-type">
+          <option value="en" ${w.type === 'en' ? 'selected' : ''}>英文</option>
+          <option value="cn" ${w.type === 'cn' ? 'selected' : ''}>中文</option>
+        </select>
+      </div>
+    </div>
+    <div class="word-actions">
+      <button onclick="saveEdit(${idx})">保存</button>
+      <button class="secondary" onclick="cancelEdit()">取消</button>
+    </div>
+  `;
+}
+
+// 保存编辑
+async function saveEdit(idx) {
+  const word = document.getElementById('edit-word').value.trim();
+  const missing = document.getElementById('edit-missing').value.trim();
+  const type = document.getElementById('edit-type').value;
+
+  if (!word || !missing) {
+    showMessage('请填写单词和缺失字符', 'error');
+    return;
+  }
+
+  // 验证缺失字符是否在单词中
+  if (!word.includes(missing)) {
+    showMessage('缺失字符必须是单词的一部分', 'error');
+    return;
+  }
+
+  // 检查是否与其他单词重复
+  if (words.some((w, i) => i !== idx && w.word === word)) {
+    showMessage('该单词已存在', 'error');
+    return;
+  }
+
+  words[idx] = { word, missing, type };
+  await saveWords();
+  editingIndex = -1;
+  showMessage('修改成功', 'success');
+}
+
+// 取消编辑
+function cancelEdit() {
+  editingIndex = -1;
+  renderWords();
+}
+
+// 删除单词
+async function deleteWord(idx) {
+  if (!confirm(`确定要删除单词"${words[idx].word}"吗？`)) {
+    return;
+  }
+
+  words.splice(idx, 1);
+  await saveWords();
+  showMessage('删除成功', 'success');
+}
+
+// 保存词库到后端
+async function saveWords() {
+  try {
+    const res = await fetch('/api/words', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(words)
+    });
+
+    if (!res.ok) {
+      throw new Error('保存失败');
+    }
+
+    renderWords();
+    updateWordCount();
+  } catch (err) {
+    showMessage('保存失败：' + err, 'error');
+  }
+}
+
+// 显示消息
+function showMessage(text, type) {
+  const msg = document.getElementById('message');
+  msg.textContent = text;
+  msg.className = `message ${type} show`;
+  setTimeout(() => {
+    msg.classList.remove('show');
+  }, 3000);
+}
+
+// 转义 HTML
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// 页面加载时初始化
+loadWords();
+</script>
+</body>
+</html>
