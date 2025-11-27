@@ -29,8 +29,9 @@
         to { transform: translateX(100px) translateY(-50px) rotate(90deg); opacity: 0; }
     }
     @keyframes explode {
-        from { transform: scale(1); opacity: 1; }
-        to { transform: scale(2); opacity: 0; }
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.5) rotate(10deg); opacity: 0.7; }
+        100% { transform: scale(2) rotate(20deg); opacity: 0; }
     }
     #answers {
         position: absolute;
@@ -55,8 +56,8 @@
     }
     .bullet {
         position: absolute;
-        width: 30px;
-        height: 30px;
+        width: auto;
+        height: 100vh;
         background: url('/static/images/pvz/bullet.png');
         background-size: cover;
     }
@@ -158,27 +159,31 @@ function fireBullet(target) {
     bullet.className = "bullet";
 
     bullet.style.left = "120px";
-    bullet.style.top = "60%";
+    bullet.style.top = "0";
+    bullet.style.bottom = "0";
 
     document.getElementById("game").appendChild(bullet);
 
     let bx = 120;
+    const targetX = window.innerWidth / 3; // 目标位置为屏幕1/3处
+    const distance = targetX - bx;
+    const duration = 60; // 60帧，约1秒
+    const step = distance / duration;
 
+    let frame = 0;
     const timer = setInterval(() => {
-        bx += 15;
+        frame++;
+        bx += step;
         bullet.style.left = bx + "px";
 
-        // 检测命中
-        const rectB = bullet.getBoundingClientRect();
-        const rectM = target.getBoundingClientRect();
-
-        if (rectB.right > rectM.left + 20) {
+        // 到达目标位置或超过时间
+        if (frame >= duration || bx >= targetX) {
             clearInterval(timer);
             bullet.remove();
             killMonster(target);
         }
 
-    }, 20);
+    }, 16); // 约60fps
 }
 
 // 击杀怪兽
