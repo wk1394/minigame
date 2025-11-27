@@ -27,6 +27,7 @@ GAMES = [
     {'name': '乘法口诀表消消乐', 'route': '/multiplication-game', 'file': 'multiplication-game.html'},
     {'name': '仙境大冒险 — 生字听写小游戏', 'route': '/listen-write', 'file': 'listen_write.html'},
     {'name': '英语单词分类游戏', 'route': '/classification', 'file': 'classification.html'},
+    {'name': '恐龙智益答题游戏', 'route': '/pvz', 'file': 'pvz.html'},
 ]
 
 # ============== 工具函数 ==============
@@ -104,6 +105,12 @@ def classification():
         return redirect('/login')
     return render_template('classification.html')
 
+@app.route('/pvz')
+def pvz():
+    """恐龙智益答题游戏页面"""
+    if 'user_id' not in session:
+        return redirect('/login')
+    return render_template('pvz.html')
 
 # ============== 认证 API ==============
 

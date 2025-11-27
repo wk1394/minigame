@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>恐龙智益答题游戏 Demo</title>
+<style>
+    body {
+        margin: 0;
+        font-family: "Comic Sans MS", sans-serif;
+        background: #b9e8ff;
+        overflow: hidden;
+    }
+    #game {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        background: url('https://i.imgur.com/6B1s2Se.png');
+        background-size: cover;
+        overflow: hidden;
+    }
+    .monster {
+        position: absolute;
+        width: 120px;
+        height: auto;
+        transition: transform 0.2s;
+    }
+    @keyframes fly {
+        from { transform: translateX(-50px) translateY(0); opacity: 1; }
+        to { transform: translateX(100px) translateY(-50px) rotate(90deg); opacity: 0; }
+    }
+    @keyframes explode {
+        from { transform: scale(1); opacity: 1; }
+        to { transform: scale(2); opacity: 0; }
+    }
+    #answers {
+        position: absolute;
+        left: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    .ans-btn {
+        padding: 15px 25px;
+        background: #fff;
+        border-radius: 12px;
+        font-size: 20px;
+        cursor: pointer;
+        border: 3px solid #333;
+        transition: 0.2s;
+    }
+    .ans-btn:hover {
+        background: #ffe08a;
+    }
+    .bullet {
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        background: url('https://i.imgur.com/YpJQp2Q.png');
+        background-size: cover;
+    }
+    #questionBox {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 32px;
+        background: rgba(255,255,255,0.8);
+        padding: 10px 30px;
+        border-radius: 15px;
+        border: 3px solid #444;
+    }
+</style>
+</head>
+<body>
+
+<div id="game">
+    <div id="questionBox"></div>
+    <div id="answers"></div>
+</div>
+
+<script>
+const monsters = [
+    { img: "https://i.imgur.com/NbPEUj1.png", speed: 1.5 }, // 小恐龙
+    { img: "https://i.imgur.com/ugzx9UK.png", speed: 1.2 }, // 霸王龙
+    { img: "https://i.imgur.com/yw8Z0fr.png", speed: 2.0 }, // 翼龙（飞行）
+];
+
+let currentMonster = null;
+let monsterX = window.innerWidth - 150;
+let moving = true;
+
+// 示例题库
+const questions = [
+    { q: "3 + 4 = ?", opts: ["5", "7", "9", "6"], right: 1 },
+    { q: "8 - 3 = ?", opts: ["6", "5", "4", "3"], right: 1 },
+    { q: "2 × 6 = ?", opts: ["10", "11", "12", "14"], right: 2 },
+];
+let qi = 0;
+
+function loadQuestion() {
+    const qData = questions[qi];
+    document.getElementById("questionBox").innerText = qData.q;
+
+    let answers = document.getElementById("answers");
+    answers.innerHTML = "";
+
+    qData.opts.forEach((op, idx) => {
+        let btn = document.createElement("div");
+        btn.className = "ans-btn";
+        btn.innerText = op;
+        btn.onclick = () => checkAnswer(idx);
+        answers.appendChild(btn);
+    });
+}
+
+// 创建怪兽
+function spawnMonster() {
+    let m = monsters[Math.floor(Math.random() * monsters.length)];
+
+    const img = document.createElement("img");
+    img.src = m.img;
+    img.className = "monster";
+    img.style.left = monsterX + "px";
+    img.style.top = "60%";
+
+    img.dataset.speed = m.speed;
+
+    document.getElementById("game").appendChild(img);
+    currentMonster = img;
+
+    moving = true;
+    requestAnimationFrame(moveMonster);
+}
+
+// 移动怪兽
+function moveMonster() {
+    if (!moving || !currentMonster) return;
+
+    monsterX -= currentMonster.dataset.speed;
+
+    currentMonster.style.left = monsterX + "px";
+
+    if (monsterX < 80) {
+        alert("❌ 游戏失败：恐龙吃掉了蛋！");
+        location.reload();
+        return;
+    }
+
+    requestAnimationFrame(moveMonster);
+}
+
+// 发射子弹
+function fireBullet(target) {
+    const bullet = document.createElement("div");
+    bullet.className = "bullet";
+
+    bullet.style.left = "120px";
+    bullet.style.top = "60%";
+
+    document.getElementById("game").appendChild(bullet);
+
+    let bx = 120;
+
+    const timer = setInterval(() => {
+        bx += 15;
+        bullet.style.left = bx + "px";
+
+        // 检测命中
+        const rectB = bullet.getBoundingClientRect();
+        const rectM = target.getBoundingClientRect();
+
+        if (rectB.right > rectM.left + 20) {
+            clearInterval(timer);
+            bullet.remove();
+            killMonster(target);
+        }
+
+    }, 20);
+}
+
+// 击杀怪兽
+function killMonster(monster) {
+    moving = false;
+
+    monster.style.animation = "explode 0.6s forwards";
+
+    setTimeout(() => monster.remove(), 500);
+
+    setTimeout(() => nextQuestion(), 600);
+}
+
+function checkAnswer(idx) {
+    const qData = questions[qi];
+    if (idx === qData.right) {
+        fireBullet(currentMonster);
+    } else {
+        // 错误则怪兽加速
+        currentMonster.dataset.speed *= 1.5;
+    }
+}
+
+function nextQuestion() {
+    qi++;
+    if (qi >= questions.length) {
+        alert("🎉 恭喜全部答对！");
+        location.reload();
+        return;
+    }
+    monsterX = window.innerWidth - 150;
+    loadQuestion();
+    spawnMonster();
+}
+
+// 初始化
+loadQuestion();
+spawnMonster();
+</script>
+</body>
+</html>
