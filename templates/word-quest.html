@@ -57,7 +57,7 @@
       <div class="controls">
         <button id="btnStart">开始游戏</button>
         <button id="btnReset" class="secondary">重置</button>
-        <button id="btnUpload" class="secondary">上传词库</button>
+        <button id="btnAdmin" class="secondary">词库管理</button>
       </div>
     </div>
 
@@ -329,9 +329,9 @@
       }
     });
 
-    // upload词库前端占位（仅UI）
-    document.getElementById('btnUpload').addEventListener('click', ()=>{
-      alert('后端上传词库功能尚未实现。如果需要，我可以帮你扩展 Flask 后端，增加上传并保存 wordlist.json 的接口和管理页面。');
+    // 词库管理按钮
+    document.getElementById('btnAdmin').addEventListener('click', ()=>{
+      window.location.href = '/admin';
     });
 
   </script>

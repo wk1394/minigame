@@ -1,107 +1,105 @@
-from flask import Flask, jsonify, send_from_directory, request, render_template_string
-import json, random, os
+"""
+字字大冒险游戏模块
+负责词库管理和游戏逻辑
+"""
+from flask import Blueprint, jsonify, request, render_template
+import json
+import os
+import random
 
+words_bp = Blueprint('words', __name__)
 
-app = Flask(__name__, static_folder='static')
+WORD_LIST_FILE = 'word_list.json'
 
-WORDLIST_PATH = 'word_list.json'
-def load_words():
+def load_word_list():
+    """加载词库"""
     try:
-        with open(WORDLIST_PATH, 'r', encoding='utf-8') as f:
+        with open(WORD_LIST_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception:
         return []
 
-
-WORDS = load_words()
-
-
-# 验证与辅助函数
-def validate_wordlist(data):
-    if not isinstance(data, list):
-        return False, '词库必须是列表'
-    for i, item in enumerate(data):
-        if not isinstance(item, dict):
-            return False, f'第 {i+1} 项必须是对象'
-    if 'word' not in item or 'missing' not in item:
-        return False, f'第 {i+1} 项缺少字段 word 或 missing'
-    return True, 'OK'
-
-
 def make_display(word, missing):
+    """生成带下划线的显示文本"""
     idx = word.find(missing)
     if idx == -1:
         return word[0] + '_' + word[1:]
     return word[:idx] + '_' + word[idx+len(missing):]
 
-@app.route('/')
-def index():
-    return send_from_directory('static', 'index.html')
+@words_bp.route('/api/words', methods=['GET'])
+def get_words():
+    """获取词库"""
+    try:
+        if os.path.exists(WORD_LIST_FILE):
+            with open(WORD_LIST_FILE, 'r', encoding='utf-8') as f:
+                words = json.load(f)
+            return jsonify(words), 200
+        else:
+            return jsonify([]), 200
+    except Exception as e:
+        return jsonify({'message': f'读取词库失败: {str(e)}'}), 500
 
+@words_bp.route('/api/words', methods=['POST'])
+def save_words():
+    """保存词库（增删改）"""
+    try:
+        words = request.json
+        
+        if not isinstance(words, list):
+            return jsonify({'message': '数据格式错误'}), 400
+        
+        # 验证词库数量限制
+        if len(words) > 40:
+            return jsonify({'message': '词库最多只能有40个单词'}), 400
+        
+        # 验证每个单词的格式
+        for word in words:
+            if not isinstance(word, dict):
+                return jsonify({'message': '单词格式错误'}), 400
+            if 'word' not in word or 'missing' not in word or 'type' not in word:
+                return jsonify({'message': '单词必须包含 word、missing 和 type 字段'}), 400
+            if word['type'] not in ['en', 'cn']:
+                return jsonify({'message': 'type 必须是 en 或 cn'}), 400
+            if word['missing'] not in word['word']:
+                return jsonify({'message': f'缺失字符"{word["missing"]}"必须在单词"{word["word"]}"中'}), 400
+        
+        # 保存到文件
+        with open(WORD_LIST_FILE, 'w', encoding='utf-8') as f:
+            json.dump(words, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'message': '保存成功'}), 200
+    except Exception as e:
+        return jsonify({'message': f'保存失败: {str(e)}'}), 500
 
-@app.route('/start')
-def start():
-    global WORDS
-    total = min(40, len(WORDS))
-    samples = random.sample(WORDS, total)
+@words_bp.route('/admin')
+def admin_page():
+    """词库管理页面"""
+    return render_template('admin.html')
+
+@words_bp.route('/start')
+def start_word_quest():
+    """开始字字大冒险游戏"""
+    words = load_word_list()
+    total = min(40, len(words))
+    if total == 0:
+        return jsonify({'rounds': []}), 200
+    
+    samples = random.sample(words, total)
     rounds = []
+    
     for i in range(0, total, 4):
         group = samples[i:i+4]
         items = []
         for it in group:
-            display = make_display(it['word'], it.get('missing',''))
+            display = make_display(it['word'], it.get('missing', ''))
             items.append({
-            'word': it['word'],
-            'missing': it.get('missing',''),
-            'type': it.get('type','en'),
-            'display': display
+                'word': it['word'],
+                'missing': it.get('missing', ''),
+                'type': it.get('type', 'en'),
+                'display': display
             })
         answers = [it['missing'] for it in group]
         random.shuffle(answers)
         rounds.append({'items': items, 'answers': answers})
-    return jsonify({'rounds': rounds})
-
-
-# 管理界面
-admin_html = """
-<h2>词库管理</h2>
-<form method="POST" action="/upload" enctype="multipart/form-data">
-<p>上传新的 wordlist.json：</p>
-<input type="file" name="file" accept="application/json" required>
-<button type="submit">上传</button>
-</form>
-<hr>
-<h3>当前词库内容：</h3>
-<pre>{{ words }}</pre>
-"""
-
-
-@app.route('/admin')
-def admin():
-    global WORDS
-    return render_template_string(admin_html, words=json.dumps(WORDS, ensure_ascii=False, indent=2))
-
-
-# 上传接口
-@app.route('/upload', methods=['POST'])
-def upload():
-    global WORDS
-    file = request.files.get('file')
-    if not file:
-        return '未选择文件', 400
-    try:
-        data = json.load(file)
-    except Exception:
-        return 'JSON 格式错误', 400
-    ok, msg = validate_wordlist(data)
-    if not ok:
-        return f'词库验证失败：{msg}', 400
-    with open(WORDLIST_PATH, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-        WORDS = load_words()
-        return '上传成功，词库已更新！<br><a href="/admin">返回管理页面</a>'
-
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    
+    return jsonify({'rounds': rounds}), 200
