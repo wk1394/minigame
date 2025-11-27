@@ -37,6 +37,7 @@
         .game-info {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             width: 80%;
             max-width: 800px;
             margin-bottom: 20px;
@@ -44,6 +45,24 @@
             padding: 10px 20px;
             border-radius: 20px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .restart-btn {
+            background-color: #3399ff;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            font-size: 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .restart-btn:hover {
+            background-color: #5db3ff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
         }
         
         .game-board {
@@ -191,6 +210,7 @@
     
     <div class="game-info">
         <div class="timer">用时: <span id="time">00:00</span></div>
+        <button class="restart-btn" id="restartBtn">重新开始</button>
         <div class="pairs">已配对: <span id="pairs">0</span>/10</div>
     </div>
     
@@ -214,6 +234,7 @@
             const victoryScreen = document.getElementById('victoryScreen');
             const finalTimeDisplay = document.getElementById('finalTime');
             const continueBtn = document.getElementById('continueBtn');
+            const restartBtn = document.getElementById('restartBtn');
             
             let selectedBubble = null;
             let matchedPairs = 0;
@@ -395,7 +416,10 @@
             
             // 继续挑战按钮事件
             continueBtn.addEventListener('click', startGame);
-            
+
+            // 重新开始按钮事件
+            restartBtn.addEventListener('click', startGame);
+
             // 初始化游戏
             startGame();
         });
