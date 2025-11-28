@@ -14,15 +14,28 @@
         position: relative;
         width: 100vw;
         height: 100vh;
-        background: url('/static/images/pvz/background.png');
+        background: url('/static/images/pvz/backgroud.png');
         background-size: cover;
+        background-position: center;
         overflow: hidden;
+    }
+    #game::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: inherit;
+        opacity: 0.3;
+        z-index: 0;
     }
     .monster {
         position: absolute;
         width: auto;
         height: 100vh;
         transition: transform 0.2s;
+        z-index: 10;
     }
     @keyframes fly {
         from { transform: translateX(-50px) translateY(0); opacity: 1; }
@@ -41,6 +54,7 @@
         display: flex;
         flex-direction: column;
         gap: 20px;
+        z-index: 20;
     }
     .ans-btn {
         padding: 15px 25px;
@@ -56,10 +70,17 @@
     }
     .bullet {
         position: absolute;
-        width: auto;
-        height: 100vh;
+        width: 60px;
+        height: 60px;
         background: url('/static/images/pvz/bullet.png');
-        background-size: cover;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        z-index: 15;
+        transition: none;
+        pointer-events: none;
+        border: 2px solid red;
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
     }
     #questionBox {
         position: absolute;
@@ -71,6 +92,7 @@
         padding: 10px 30px;
         border-radius: 15px;
         border: 3px solid #444;
+        z-index: 20;
     }
 </style>
 </head>
@@ -154,31 +176,50 @@ function moveMonster() {
 }
 
 // 发射子弹
-function fireBullet(target) {
+function fireBullet(target, startX, startY) {
     const bullet = document.createElement("div");
     bullet.className = "bullet";
 
-    bullet.style.left = "120px";
-    bullet.style.top = "0";
-    bullet.style.bottom = "0";
+    // 调整起始位置，让子弹居中
+    bullet.style.left = (startX - 30) + "px"; // 减去子弹宽度的一半
+    bullet.style.top = (startY - 30) + "px"; // 减去子弹高度的一半
 
     document.getElementById("game").appendChild(bullet);
 
-    let bx = 120;
-    const targetX = window.innerWidth / 3; // 目标位置为屏幕1/3处
-    const distance = targetX - bx;
-    const duration = 60; // 60帧，约1秒
-    const step = distance / duration;
+    console.log("子弹创建:", { startX, startY });
+
+    // 获取怪兽的位置
+    const monsterRect = target.getBoundingClientRect();
+    const targetX = monsterRect.left + monsterRect.width / 2 - 30; // 居中
+    const targetY = monsterRect.top + monsterRect.height / 2 - 30; // 居中
+
+    console.log("目标位置:", { targetX, targetY });
+
+    const distanceX = targetX - (startX - 30);
+    const distanceY = targetY - (startY - 30);
+    const duration = 120; // 120帧，约2秒，让移动更容易看到
+    const stepX = distanceX / duration;
+    const stepY = distanceY / duration;
 
     let frame = 0;
+    let bx = startX - 30;
+    let by = startY - 30;
+
     const timer = setInterval(() => {
         frame++;
-        bx += step;
+        bx += stepX;
+        by += stepY;
         bullet.style.left = bx + "px";
+        bullet.style.top = by + "px";
+
+        if (frame % 20 === 0) {
+            console.log("子弹位置:", { bx, by, frame });
+        }
 
         // 到达目标位置或超过时间
-        if (frame >= duration || bx >= targetX) {
+        if (frame >= duration) {
             clearInterval(timer);
+            console.log("子弹到达目标");
             bullet.remove();
             killMonster(target);
         }
@@ -200,7 +241,12 @@ function killMonster(monster) {
 function checkAnswer(idx) {
     const qData = questions[qi];
     if (idx === qData.right) {
-        fireBullet(currentMonster);
+        // 获取点击按钮的位置
+        const answerBtns = document.querySelectorAll('.ans-btn');
+        const clickedBtn = answerBtns[idx];
+        const btnRect = clickedBtn.getBoundingClientRect();
+
+        fireBullet(currentMonster, btnRect.left, btnRect.top + btnRect.height / 2);
     } else {
         // 错误则怪兽加速
         currentMonster.dataset.speed *= 1.5;
