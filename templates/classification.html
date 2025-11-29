@@ -207,6 +207,48 @@ h1 {
     opacity: 0.6;
     pointer-events: none;
 }
+#translationTip {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px 50px;
+    border-radius: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    z-index: 2000;
+    text-align: center;
+    animation: none;
+    opacity: 0;
+}
+@keyframes popIn {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+@keyframes popOut {
+    0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+}
+#translationTip .word-english {
+    font-size: 36px;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+#translationTip .word-chinese {
+    font-size: 32px;
+    color: #FFD700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+#translationTip .correct-category {
+    font-size: 20px;
+    margin-top: 15px;
+    color: #FFE4B5;
+    opacity: 0.9;
+}
 </style>
 </head>
 <body>
@@ -233,6 +275,7 @@ h1 {
 </div>
 
 <div id="particles"></div>
+<div id="translationTip"></div>
 
 <script>
 // 音频上下文
@@ -343,6 +386,34 @@ const allWordsData = {
     food: ["pizza", "burger", "pasta", "rice", "bread", "cheese", "chicken", "fish", "salad", "soup", "cake", "cookie"],
     vehicle: ["car", "bus", "train", "plane", "bicycle", "motorcycle", "truck", "boat", "ship", "helicopter", "subway", "taxi"],
     weather: ["sunny", "rainy", "cloudy", "snowy", "windy", "stormy", "foggy", "hot", "cold", "warm", "humid", "dry"]
+};
+
+// 单词中文翻译
+const wordTranslations = {
+    // 水果
+    apple: "苹果", banana: "香蕉", orange: "橙子", grape: "葡萄", mango: "芒果", peach: "桃子",
+    pear: "梨", lemon: "柠檬", cherry: "樱桃", strawberry: "草莓", watermelon: "西瓜", pineapple: "菠萝",
+    // 动物
+    cat: "猫", dog: "狗", lion: "狮子", tiger: "老虎", elephant: "大象", monkey: "猴子",
+    rabbit: "兔子", bear: "熊", fox: "狐狸", wolf: "狼", giraffe: "长颈鹿", zebra: "斑马",
+    // 颜色
+    red: "红色", blue: "蓝色", green: "绿色", yellow: "黄色", purple: "紫色", orange: "橙色",
+    pink: "粉色", black: "黑色", white: "白色", brown: "棕色", gray: "灰色", gold: "金色",
+    // 文具
+    pen: "钢笔", book: "书", pencil: "铅笔", eraser: "橡皮", ruler: "尺子", notebook: "笔记本",
+    crayon: "蜡笔", marker: "记号笔", scissors: "剪刀", glue: "胶水", stapler: "订书机", paper: "纸",
+    // 运动
+    football: "足球", basketball: "篮球", tennis: "网球", swimming: "游泳", running: "跑步", boxing: "拳击",
+    skiing: "滑雪", skating: "滑冰", baseball: "棒球", volleyball: "排球", golf: "高尔夫", hockey: "曲棍球",
+    // 食物
+    pizza: "披萨", burger: "汉堡", pasta: "意大利面", rice: "米饭", bread: "面包", cheese: "奶酪",
+    chicken: "鸡肉", fish: "鱼", salad: "沙拉", soup: "汤", cake: "蛋糕", cookie: "饼干",
+    // 交通工具
+    car: "汽车", bus: "公交车", train: "火车", plane: "飞机", bicycle: "自行车", motorcycle: "摩托车",
+    truck: "卡车", boat: "船", ship: "轮船", helicopter: "直升机", subway: "地铁", taxi: "出租车",
+    // 天气
+    sunny: "晴朗", rainy: "下雨", cloudy: "多云", snowy: "下雪", windy: "有风", stormy: "暴风雨",
+    foggy: "有雾", hot: "热", cold: "冷", warm: "温暖", humid: "潮湿", dry: "干燥"
 };
 
 const categoryNames = {
@@ -499,9 +570,36 @@ function handleDrop(e, categoryDiv) {
         score = Math.max(0, score - 5);
         wordDiv.classList.add('wrong');
         setTimeout(() => wordDiv.classList.remove('wrong'), 500);
+        
+        // 显示翻译提示
+        showTranslation(wordText, wordCategory);
     }
     
     updateScore();
+}
+
+function showTranslation(word, correctCategory) {
+    const tip = document.getElementById('translationTip');
+    const translation = wordTranslations[word] || word;
+    const categoryName = categoryNames[correctCategory] || correctCategory;
+    
+    tip.innerHTML = `
+        <div class="word-english">${word}</div>
+        <div class="word-chinese">${translation}</div>
+        <div class="correct-category">应该是: ${categoryName}</div>
+    `;
+    
+    // 弹出动画
+    tip.style.animation = 'popIn 0.3s ease forwards';
+    tip.style.opacity = '1';
+    
+    // 2秒后消失
+    setTimeout(() => {
+        tip.style.animation = 'popOut 0.3s ease forwards';
+        setTimeout(() => {
+            tip.style.opacity = '0';
+        }, 300);
+    }, 2000);
 }
 
 function createParticles(x, y) {
