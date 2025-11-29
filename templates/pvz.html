@@ -94,6 +94,24 @@
         border: 3px solid #444;
         z-index: 20;
     }
+    #resetBtn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        padding: 15px 30px;
+        background: #4CAF50;
+        color: white;
+        border: 3px solid #2e7d32;
+        border-radius: 12px;
+        font-size: 20px;
+        cursor: pointer;
+        transition: 0.2s;
+        z-index: 20;
+    }
+    #resetBtn:hover {
+        background: #66bb6a;
+        transform: scale(1.05);
+    }
 </style>
 </head>
 <body>
@@ -101,6 +119,7 @@
 <div id="game">
     <div id="questionBox"></div>
     <div id="answers"></div>
+    <button id="resetBtn">🔄 重置游戏</button>
 </div>
 
 <script>
@@ -114,12 +133,50 @@ let currentMonster = null;
 let monsterX = window.innerWidth - 150;
 let moving = true;
 
-// 示例题库
-const questions = [
-    { q: "3 + 4 = ?", opts: ["5", "7", "9", "6"], right: 1 },
-    { q: "8 - 3 = ?", opts: ["6", "5", "4", "3"], right: 1 },
-    { q: "2 × 6 = ?", opts: ["10", "11", "12", "14"], right: 2 },
-];
+// 生成随机题库（100以内加减法）
+function generateQuestions(count = 10) {
+    const newQuestions = [];
+    for (let i = 0; i < count; i++) {
+        const isAddition = Math.random() > 0.5;
+        let num1, num2, answer;
+        
+        if (isAddition) {
+            num1 = Math.floor(Math.random() * 90) + 1; // 1-90
+            num2 = Math.floor(Math.random() * (100 - num1)); // 确保和不超过100
+            answer = num1 + num2;
+        } else {
+            num1 = Math.floor(Math.random() * 100) + 1; // 1-100
+            num2 = Math.floor(Math.random() * num1); // 确保结果为正数
+            answer = num1 - num2;
+        }
+        
+        const operator = isAddition ? "+" : "-";
+        const question = `${num1} ${operator} ${num2} = ?`;
+        
+        // 生成3个错误答案
+        const wrongAnswers = new Set();
+        while (wrongAnswers.size < 3) {
+            let wrong = answer + Math.floor(Math.random() * 21) - 10; // ±10范围内
+            if (wrong !== answer && wrong >= 0 && wrong <= 100) {
+                wrongAnswers.add(wrong);
+            }
+        }
+        
+        // 合并答案并打乱
+        const allAnswers = [answer, ...Array.from(wrongAnswers)];
+        const shuffled = allAnswers.sort(() => Math.random() - 0.5);
+        const rightIndex = shuffled.indexOf(answer);
+        
+        newQuestions.push({
+            q: question,
+            opts: shuffled.map(String),
+            right: rightIndex
+        });
+    }
+    return newQuestions;
+}
+
+let questions = generateQuestions(10);
 let qi = 0;
 
 function loadQuestion() {
@@ -257,7 +314,7 @@ function nextQuestion() {
     qi++;
     if (qi >= questions.length) {
         alert("🎉 恭喜全部答对！");
-        location.reload();
+        resetGame();
         return;
     }
     monsterX = window.innerWidth - 150;
@@ -265,9 +322,38 @@ function nextQuestion() {
     spawnMonster();
 }
 
+// 重置游戏
+function resetGame() {
+    // 清除当前怪兽
+    if (currentMonster) {
+        currentMonster.remove();
+        currentMonster = null;
+    }
+    
+    // 清除所有子弹
+    document.querySelectorAll('.bullet').forEach(b => b.remove());
+    
+    // 重新生成题库
+    questions = generateQuestions(10);
+    qi = 0;
+    monsterX = window.innerWidth - 150;
+    moving = false;
+    
+    // 重新开始游戏
+    loadQuestion();
+    spawnMonster();
+}
+
 // 初始化
 loadQuestion();
 spawnMonster();
+
+// 绑定重置按钮
+document.getElementById("resetBtn").onclick = () => {
+    if (confirm("确定要重置游戏并生成新题目吗？")) {
+        resetGame();
+    }
+};
 </script>
 </body>
 </html>

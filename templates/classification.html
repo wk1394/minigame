@@ -6,121 +6,454 @@
 <title>英语单词分类游戏</title>
 <style>
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f0f8ff;
+    font-family: 'Comic Sans MS', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 20px;
+    position: relative;
+    overflow-x: hidden;
 }
-h1 { color: #333; }
+h1 { 
+    color: #fff; 
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    animation: bounce 2s infinite;
+}
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(5deg); }
+}
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px) rotate(-5deg); }
+    75% { transform: translateX(10px) rotate(5deg); }
+}
+@keyframes celebrate {
+    0% { transform: scale(1) rotate(0deg); }
+    25% { transform: scale(1.2) rotate(5deg); }
+    50% { transform: scale(1.1) rotate(-5deg); }
+    75% { transform: scale(1.2) rotate(5deg); }
+    100% { transform: scale(1) rotate(0deg); }
+}
+#gameContainer {
+    background: rgba(255,255,255,0.95);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    max-width: 900px;
+    width: 100%;
+}
+#controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+.btn {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+#resetBtn {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+#difficultyBtn {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
 #words {
     display: flex;
     flex-wrap: wrap;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
+    min-height: 80px;
+    justify-content: center;
+    gap: 10px;
 }
 .word {
-    background-color: #1e90ff;
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
     color: white;
-    padding: 10px 15px;
-    margin: 5px;
-    border-radius: 8px;
+    padding: 12px 20px;
+    border-radius: 15px;
     cursor: grab;
+    font-weight: bold;
+    font-size: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    transition: all 0.3s;
+    animation: float 3s ease-in-out infinite;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+}
+.word:hover {
+    transform: scale(1.1) rotate(5deg);
+}
+.word:active {
+    cursor: grabbing;
 }
 #categories {
     display: flex;
     gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 .category {
-    width: 150px;
-    min-height: 150px;
-    background-color: #fff;
-    border: 2px solid #1e90ff;
-    border-radius: 10px;
+    width: 180px;
+    min-height: 200px;
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    border: 4px dashed #667eea;
+    border-radius: 15px;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     flex-direction: column;
-    padding: 10px;
+    padding: 15px;
+    transition: all 0.3s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.category:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
+.category.drag-over {
+    background: linear-gradient(135deg, #fed6e3 0%, #a8edea 100%);
+    border-color: #f5576c;
+    transform: scale(1.08);
 }
 .category h3 {
-    margin-bottom: 10px;
-}
-#score {
-    margin-top: 20px;
+    margin-bottom: 15px;
+    color: #667eea;
     font-size: 18px;
+    text-align: center;
+    text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+}
+.category .word {
+    margin: 5px 0;
+    width: calc(100% - 20px);
+    text-align: center;
+    animation: none;
+}
+#scoreBoard {
+    display: flex;
+    gap: 30px;
+    margin-top: 20px;
+    font-size: 20px;
+    font-weight: bold;
+    justify-content: center;
+}
+.score-item {
+    background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+    padding: 15px 25px;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     color: #333;
 }
 .correct {
-    background-color: #32cd32 !important;
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%) !important;
+    animation: celebrate 0.6s ease;
 }
 .wrong {
-    background-color: #ff6347 !important;
+    background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%) !important;
+    animation: shake 0.5s ease;
+}
+#particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+}
+.particle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: gold;
+    border-radius: 50%;
+    animation: particle-fall 2s ease-out forwards;
+}
+@keyframes particle-fall {
+    to {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0;
+    }
+}
+#timer {
+    font-size: 24px;
+    color: #667eea;
+    font-weight: bold;
+    margin-bottom: 15px;
+    text-align: center;
+}
+.finished {
+    opacity: 0.6;
+    pointer-events: none;
 }
 </style>
 </head>
 <body>
 
-<h1>英语单词分类游戏</h1>
-<div id="words"></div>
-<div id="categories">
-    <div class="category" data-category="fruit"><h3>水果</h3></div>
-    <div class="category" data-category="animal"><h3>动物</h3></div>
-    <div class="category" data-category="color"><h3>颜色</h3></div>
-    <div class="category" data-category="stationery"><h3>文具</h3></div>
+<h1>🎮 英语单词分类游戏</h1>
+
+<div id="gameContainer">
+    <div id="controls">
+        <button class="btn" id="resetBtn">🔄 重新开始</button>
+        <button class="btn" id="difficultyBtn">⚙️ 难度: 简单</button>
+    </div>
+    
+    <div id="timer">⏱️ 时间: 00:00</div>
+    
+    <div id="words"></div>
+    <div id="categories"></div>
+    
+    <div id="scoreBoard">
+        <div class="score-item">⭐ 得分: <span id="score">0</span></div>
+        <div class="score-item">✅ 正确: <span id="correct">0</span></div>
+        <div class="score-item">❌ 错误: <span id="wrong">0</span></div>
+    </div>
 </div>
-<div id="score">得分: 0</div>
+
+<div id="particles"></div>
 
 <script>
-const wordsData = [
-    {word: "apple", category: "fruit"},
-    {word: "banana", category: "fruit"},
-    {word: "cat", category: "animal"},
-    {word: "dog", category: "animal"},
-    {word: "red", category: "color"},
-    {word: "blue", category: "color"},
-    {word: "pen", category: "stationery"},
-    {word: "book", category: "stationery"}
-];
+// 完整的单词库
+const allWordsData = {
+    fruit: ["apple", "banana", "orange", "grape", "mango", "peach", "pear", "lemon", "cherry", "strawberry", "watermelon", "pineapple"],
+    animal: ["cat", "dog", "lion", "tiger", "elephant", "monkey", "rabbit", "bear", "fox", "wolf", "giraffe", "zebra"],
+    color: ["red", "blue", "green", "yellow", "purple", "orange", "pink", "black", "white", "brown", "gray", "gold"],
+    stationery: ["pen", "book", "pencil", "eraser", "ruler", "notebook", "crayon", "marker", "scissors", "glue", "stapler", "paper"],
+    sport: ["football", "basketball", "tennis", "swimming", "running", "boxing", "skiing", "skating", "baseball", "volleyball", "golf", "hockey"],
+    food: ["pizza", "burger", "pasta", "rice", "bread", "cheese", "chicken", "fish", "salad", "soup", "cake", "cookie"],
+    vehicle: ["car", "bus", "train", "plane", "bicycle", "motorcycle", "truck", "boat", "ship", "helicopter", "subway", "taxi"],
+    weather: ["sunny", "rainy", "cloudy", "snowy", "windy", "stormy", "foggy", "hot", "cold", "warm", "humid", "dry"]
+};
+
+const categoryNames = {
+    fruit: "🍎 水果",
+    animal: "🐾 动物",
+    color: "🎨 颜色",
+    stationery: "✏️ 文具",
+    sport: "⚽ 运动",
+    food: "🍔 食物",
+    vehicle: "🚗 交通工具",
+    weather: "🌤️ 天气"
+};
 
 let score = 0;
-const wordsDiv = document.getElementById('words');
+let correctCount = 0;
+let wrongCount = 0;
+let difficulty = 'easy'; // easy, medium, hard
+let currentWords = [];
+let currentCategories = [];
+let startTime;
+let timerInterval;
 
-// 随机打乱单词
-const shuffledWords = wordsData.sort(() => 0.5 - Math.random());
-
-shuffledWords.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'word';
-    div.textContent = item.word;
-    div.draggable = true;
-    div.dataset.category = item.category;
-    div.addEventListener('dragstart', e => {
-        e.dataTransfer.setData('text', item.word);
-    });
-    wordsDiv.appendChild(div);
-});
-
-const categories = document.querySelectorAll('.category');
-categories.forEach(cat => {
-    cat.addEventListener('dragover', e => e.preventDefault());
-    cat.addEventListener('drop', e => {
-        const wordText = e.dataTransfer.getData('text');
-        const wordObj = wordsData.find(w => w.word === wordText);
-        if (cat.dataset.category === wordObj.category) {
-            score += 10;
-            document.getElementById('score').textContent = "得分: " + score;
-            const wordDiv = [...wordsDiv.children].find(d => d.textContent === wordText);
-            wordDiv.classList.add('correct');
-            wordDiv.draggable = false;
-            cat.appendChild(wordDiv);
-        } else {
-            const wordDiv = [...wordsDiv.children].find(d => d.textContent === wordText);
-            wordDiv.classList.add('wrong');
-            setTimeout(() => wordDiv.classList.remove('wrong'), 500);
+// 生成随机游戏
+function generateGame() {
+    clearInterval(timerInterval);
+    const categoriesDiv = document.getElementById('categories');
+    const wordsDiv = document.getElementById('words');
+    categoriesDiv.innerHTML = '';
+    wordsDiv.innerHTML = '';
+    
+    // 根据难度选择分类数量和单词数量
+    let numCategories, wordsPerCategory;
+    if (difficulty === 'easy') {
+        numCategories = 3;
+        wordsPerCategory = 3;
+    } else if (difficulty === 'medium') {
+        numCategories = 4;
+        wordsPerCategory = 4;
+    } else {
+        numCategories = 5;
+        wordsPerCategory = 5;
+    }
+    
+    // 随机选择分类
+    const allCategories = Object.keys(allWordsData);
+    const selectedCategories = [];
+    while (selectedCategories.length < numCategories) {
+        const randomCat = allCategories[Math.floor(Math.random() * allCategories.length)];
+        if (!selectedCategories.includes(randomCat)) {
+            selectedCategories.push(randomCat);
+        }
+    }
+    
+    currentCategories = selectedCategories;
+    currentWords = [];
+    
+    // 为每个分类创建容器
+    selectedCategories.forEach(cat => {
+        const div = document.createElement('div');
+        div.className = 'category';
+        div.dataset.category = cat;
+        div.innerHTML = `<h3>${categoryNames[cat]}</h3>`;
+        
+        div.addEventListener('dragover', e => {
+            e.preventDefault();
+            div.classList.add('drag-over');
+        });
+        div.addEventListener('dragleave', () => {
+            div.classList.remove('drag-over');
+        });
+        div.addEventListener('drop', e => {
+            handleDrop(e, div);
+        });
+        
+        categoriesDiv.appendChild(div);
+        
+        // 从该分类随机选择单词
+        const categoryWords = allWordsData[cat];
+        const selectedWords = [];
+        while (selectedWords.length < wordsPerCategory) {
+            const randomWord = categoryWords[Math.floor(Math.random() * categoryWords.length)];
+            if (!selectedWords.includes(randomWord)) {
+                selectedWords.push(randomWord);
+                currentWords.push({word: randomWord, category: cat});
+            }
         }
     });
-});
+    
+    // 打乱单词顺序
+    currentWords.sort(() => 0.5 - Math.random());
+    
+    // 创建单词元素
+    currentWords.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'word';
+        div.textContent = item.word;
+        div.draggable = true;
+        div.dataset.category = item.category;
+        div.dataset.word = item.word;
+        div.style.animationDelay = `${idx * 0.1}s`;
+        
+        div.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('word', item.word);
+            e.dataTransfer.setData('category', item.category);
+        });
+        
+        wordsDiv.appendChild(div);
+    });
+    
+    // 启动计时器
+    startTime = Date.now();
+    updateTimer();
+    timerInterval = setInterval(updateTimer, 1000);
+}
+
+function handleDrop(e, categoryDiv) {
+    e.preventDefault();
+    categoryDiv.classList.remove('drag-over');
+    
+    const wordText = e.dataTransfer.getData('word');
+    const wordCategory = e.dataTransfer.getData('category');
+    const targetCategory = categoryDiv.dataset.category;
+    
+    const wordDiv = document.querySelector(`.word[data-word="${wordText}"]`);
+    if (!wordDiv || wordDiv.classList.contains('finished')) return;
+    
+    if (wordCategory === targetCategory) {
+        // 正确
+        score += 10 * (difficulty === 'easy' ? 1 : difficulty === 'medium' ? 1.5 : 2);
+        correctCount++;
+        wordDiv.classList.add('correct');
+        wordDiv.classList.add('finished');
+        wordDiv.draggable = false;
+        categoryDiv.appendChild(wordDiv);
+        
+        // 创建粒子效果
+        createParticles(e.clientX, e.clientY);
+        
+        // 检查是否完成
+        checkCompletion();
+    } else {
+        // 错误
+        wrongCount++;
+        score = Math.max(0, score - 5);
+        wordDiv.classList.add('wrong');
+        setTimeout(() => wordDiv.classList.remove('wrong'), 500);
+    }
+    
+    updateScore();
+}
+
+function createParticles(x, y) {
+    const particlesDiv = document.getElementById('particles');
+    const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'];
+    
+    for (let i = 0; i < 15; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = x + 'px';
+        particle.style.top = y + 'px';
+        particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+        particle.style.animationDelay = `${i * 0.05}s`;
+        particle.style.transform = `rotate(${Math.random() * 360}deg)`;
+        particlesDiv.appendChild(particle);
+        
+        setTimeout(() => particle.remove(), 2000);
+    }
+}
+
+function updateScore() {
+    document.getElementById('score').textContent = Math.round(score);
+    document.getElementById('correct').textContent = correctCount;
+    document.getElementById('wrong').textContent = wrongCount;
+}
+
+function updateTimer() {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const seconds = (elapsed % 60).toString().padStart(2, '0');
+    document.getElementById('timer').textContent = `⏱️ 时间: ${minutes}:${seconds}`;
+}
+
+function checkCompletion() {
+    const remainingWords = document.querySelectorAll('.word:not(.finished)');
+    if (remainingWords.length === 0) {
+        clearInterval(timerInterval);
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        setTimeout(() => {
+            alert(`🎉 恭喜完成！\n得分: ${Math.round(score)}\n正确: ${correctCount}\n错误: ${wrongCount}\n用时: ${elapsed}秒`);
+        }, 500);
+    }
+}
+
+function resetGame() {
+    score = 0;
+    correctCount = 0;
+    wrongCount = 0;
+    updateScore();
+    generateGame();
+}
+
+function changeDifficulty() {
+    const difficulties = ['easy', 'medium', 'hard'];
+    const difficultyNames = {easy: '简单', medium: '中等', hard: '困难'};
+    const currentIndex = difficulties.indexOf(difficulty);
+    difficulty = difficulties[(currentIndex + 1) % 3];
+    document.getElementById('difficultyBtn').textContent = `⚙️ 难度: ${difficultyNames[difficulty]}`;
+    resetGame();
+}
+
+// 初始化
+document.getElementById('resetBtn').onclick = resetGame;
+document.getElementById('difficultyBtn').onclick = changeDifficulty;
+generateGame();
 </script>
 
 </body>
