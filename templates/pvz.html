@@ -76,6 +76,14 @@
         25% { transform: rotate(-10deg); }
         75% { transform: rotate(10deg); }
     }
+    @keyframes eaten {
+        0% { transform: scale(1) rotate(0deg); opacity: 1; }
+        20% { transform: scale(0.9) rotate(-15deg); opacity: 0.9; }
+        40% { transform: scale(0.7) rotate(15deg); opacity: 0.7; }
+        60% { transform: scale(0.5) rotate(-30deg); opacity: 0.5; }
+        80% { transform: scale(0.3) rotate(30deg); opacity: 0.3; }
+        100% { transform: scale(0) rotate(360deg); opacity: 0; }
+    }
     #playerDino {
         position: absolute;
         left: 100px;
@@ -94,6 +102,9 @@
     }
     #playerDino.cry {
         animation: cry 0.5s ease-in-out infinite;
+    }
+    #playerDino.eaten {
+        animation: eaten 1.5s ease-in-out forwards;
     }
     .emotion {
         position: absolute;
@@ -459,67 +470,32 @@ function moveMonster() {
     if (monsterX < 80) {
         moving = false;
         
+        // 小恐龙被吃掉动画
+        const playerDino = document.getElementById('playerDino');
+        playerDino.className = 'eaten';
+        showEmotion('💀');
+        
         // 失败音效
         playSound('fail');
         
+        // 等待动画完成后显示失败信息
         setTimeout(() => {
             alert(`❌ 游戏失败：恐龙被吃掉了！\n\n本局得分: ${score}分\n答对题数: ${qi}题`);
             resetGame();
-        }, 300);
+        }, 1500);
         return;
     }
 
     requestAnimationFrame(moveMonster);
 }
 
-// 发射子弹
+// 发射子弹（答对后直接击中怪兽）
 function fireBullet(target, startX, startY) {
     // 发射音效
     playSound('shoot');
     
-    const bullet = document.createElement("div");
-    bullet.className = "bullet";
-
-    // 调整起始位置，让子弹居中
-    bullet.style.left = (startX - 30) + "px"; // 减去子弹宽度的一半
-    bullet.style.top = (startY - 30) + "px"; // 减去子弹高度的一半
-
-    document.getElementById("game").appendChild(bullet);
-
-    console.log("子弹创建:", { startX, startY });
-
-    // 获取怪兽的位置
-    const monsterRect = target.getBoundingClientRect();
-    const targetX = monsterRect.left + monsterRect.width / 2 - 30; // 居中
-    const targetY = monsterRect.top + monsterRect.height / 2 - 30; // 居中
-
-    console.log("目标位置:", { targetX, targetY });
-
-    const distanceX = targetX - (startX - 30);
-    const distanceY = targetY - (startY - 30);
-    const duration = 60; // 60帧，刚好1秒（60fps）
-    const stepX = distanceX / duration;
-    const stepY = distanceY / duration;
-
-    let frame = 0;
-    let bx = startX - 30;
-    let by = startY - 30;
-
-    const timer = setInterval(() => {
-        frame++;
-        bx += stepX;
-        by += stepY;
-        bullet.style.left = bx + "px";
-        bullet.style.top = by + "px";
-
-        // 到达目标位置或超过时间
-        if (frame >= duration) {
-            clearInterval(timer);
-            bullet.remove();
-            killMonster(target);
-        }
-
-    }, 16); // 约60fps，确保1秒内到达
+    // 直接击杀怪兽，不显示子弹移动动画
+    killMonster(target);
 }
 
 // 击杀怪兽
