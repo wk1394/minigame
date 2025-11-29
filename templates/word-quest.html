@@ -6,47 +6,65 @@
   <title>字字大冒险 · Word Quest</title>
   <style>
     :root{--bg:#e8f5ff;--card:#ffffff;--accent:#ffcc33;--ok:#4CAF50;--err:#F44336}
-    html,body{height:100%;margin:0;font-family:Helvetica, Arial, sans-serif;background:linear-gradient(180deg,#dff3ff,#fff);}
+    html,body{height:100%;margin:0;font-family:'Comic Sans MS', Helvetica, Arial, sans-serif;background:linear-gradient(135deg,#667eea 0%, #764ba2 100%);}
     .container{max-width:1100px;margin:20px auto;padding:16px}
-    .header{display:flex;align-items:center;justify-content:space-between}
-    h1{margin:0;font-size:28px;color:#333}
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    h1{margin:0;font-size:32px;color:#fff;text-shadow:2px 2px 4px rgba(0,0,0,0.3);animation:titleGlow 3s ease-in-out infinite}
+    @keyframes titleGlow{0%,100%{text-shadow:2px 2px 4px rgba(0,0,0,0.3)}50%{text-shadow:0 0 20px rgba(255,255,255,0.8),2px 2px 4px rgba(0,0,0,0.3)}}
     .controls{display:flex;gap:10px}
-    button{border:0;padding:10px 16px;border-radius:12px;background:#4aa3ff;color:#fff;cursor:pointer}
-    button.secondary{background:#9fbffb;color:#123}
+    button{border:0;padding:12px 20px;border-radius:12px;background:linear-gradient(135deg,#4aa3ff,#2196F3);color:#fff;cursor:pointer;font-weight:bold;transition:all 0.3s;box-shadow:0 4px 10px rgba(0,0,0,0.2)}
+    button:hover{transform:translateY(-2px);box-shadow:0 6px 15px rgba(0,0,0,0.3)}
+    button.secondary{background:linear-gradient(135deg,#9fbffb,#7ba3d8);color:#fff}
 
     .game-area{display:flex;margin-top:18px;gap:18px}
-    .left,.right{background:var(--card);border-radius:14px;padding:14px;box-shadow:0 6px 14px rgba(0,0,0,0.06)}
-    .left{flex:1;min-height:360px}
-    .right{width:260px}
+    .left,.right{background:rgba(255,255,255,0.95);border-radius:20px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,0.2);backdrop-filter:blur(10px)}
+    .left{flex:1;min-height:360px;position:relative}
+    .right{width:280px}
 
-    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-    .progress{height:12px;background:#eee;border-radius:8px;overflow:hidden;width:55%}
-    .progress > i{display:block;height:100%;background:linear-gradient(90deg,#ffcf6b,#ff9a6b);width:0%}
-    .timer{font-weight:700;color:#333}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .progress{height:16px;background:#e0e0e0;border-radius:10px;overflow:hidden;width:55%;box-shadow:inset 0 2px 4px rgba(0,0,0,0.1)}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,#FFD700,#FFA500,#FF6347);width:0%;transition:width 0.3s ease;box-shadow:0 0 10px rgba(255,165,0,0.5)}
+    .timer{font-weight:700;color:#333;font-size:20px;background:linear-gradient(135deg,#FFD700,#FFA500);padding:8px 16px;border-radius:10px;box-shadow:0 4px 8px rgba(0,0,0,0.2);animation:timerPulse 1s ease-in-out infinite}
+    @keyframes timerPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 
-    .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-    .card{background:linear-gradient(180deg,#fff,#f8fdff);padding:12px;border-radius:12px;border:2px solid rgba(0,0,0,0.04);min-height:84px;display:flex;align-items:center;justify-content:center;font-size:22px;position:relative}
-    .card .missing{display:inline-block;padding:6px 10px;border-radius:8px;background:#f0f8ff;min-width:48px;text-align:center}
-    .card.correct{border-color:var(--ok);box-shadow:0 6px 18px rgba(76,175,80,0.12)}
-    .card.wrong{border-color:var(--err)}
+    .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+    .card{background:linear-gradient(135deg,#fff 0%,#f0f8ff 100%);padding:16px;border-radius:16px;border:3px solid #ddd;min-height:100px;display:flex;align-items:center;justify-content:center;font-size:24px;position:relative;cursor:pointer;transition:all 0.3s;box-shadow:0 4px 12px rgba(0,0,0,0.1);font-weight:bold}
+    .card:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,0.15)}
+    .card .missing{display:inline-block;padding:8px 14px;border-radius:10px;background:linear-gradient(135deg,#fff3cd,#ffe5a0);min-width:60px;text-align:center;border:2px dashed #ffc107;animation:blinkBorder 1.5s ease-in-out infinite}
+    @keyframes blinkBorder{0%,100%{border-color:#ffc107}50%{border-color:#ff9800}}
+    .card.correct{border-color:var(--ok);background:linear-gradient(135deg,#d4edda 0%,#c3e6cb 100%);box-shadow:0 6px 18px rgba(76,175,80,0.3);animation:celebrate 0.6s ease}
+    .card.wrong{border-color:var(--err);background:linear-gradient(135deg,#f8d7da 0%,#f5c6cb 100%)}
+    @keyframes celebrate{0%,100%{transform:scale(1) rotate(0deg)}25%{transform:scale(1.05) rotate(-3deg)}75%{transform:scale(1.05) rotate(3deg)}}
 
-    .answers{display:flex;flex-direction:column;gap:12px}
-    .answer{padding:12px;border-radius:12px;background:linear-gradient(180deg,#fff,#f7fbff);text-align:center;cursor:pointer;border:2px solid rgba(0,0,0,0.04);font-weight:700}
-    .answer.dragging{opacity:0.6}
-    .answer.used{opacity:0.4}
+    .answers{display:flex;flex-direction:column;gap:14px}
+    .answer{padding:14px 18px;border-radius:14px;background:linear-gradient(135deg,#FFD700 0%,#FFA500 100%);text-align:center;cursor:grab;border:3px solid #FF8C00;font-weight:700;font-size:18px;transition:all 0.3s;box-shadow:0 4px 10px rgba(255,165,0,0.3);color:#333}
+    .answer:hover{transform:scale(1.05) rotate(-2deg);box-shadow:0 6px 15px rgba(255,165,0,0.5)}
+    .answer:active{cursor:grabbing;transform:scale(0.95)}
+    .answer.dragging{opacity:0.6;transform:scale(1.1) rotate(5deg)}
+    .answer.used{opacity:0.3;background:linear-gradient(135deg,#ccc 0%,#999 100%);border-color:#666;cursor:not-allowed}
 
-    .footer{display:flex;gap:12px;justify-content:center;margin-top:18px}
-    .small{font-size:12px;color:#666}
+    .footer{display:flex;gap:20px;justify-content:center;margin-top:20px}
+    .small{font-size:14px;color:#333;font-weight:600}
+    #combo{background:linear-gradient(135deg,#ff6b6b,#ee5a6f);color:#fff;padding:8px 16px;border-radius:10px;box-shadow:0 4px 8px rgba(238,90,111,0.3);animation:comboGlow 2s ease-in-out infinite}
+    @keyframes comboGlow{0%,100%{box-shadow:0 4px 8px rgba(238,90,111,0.3)}50%{box-shadow:0 0 20px rgba(238,90,111,0.6)}}
+    #roundInfo{background:linear-gradient(135deg,#4facfe,#00f2fe);color:#fff;padding:8px 16px;border-radius:10px;box-shadow:0 4px 8px rgba(0,242,254,0.3)}
 
     /* animations */
-    @keyframes pop {0%{transform:scale(0.6);opacity:0}100%{transform:scale(1);opacity:1}}
-    .pop{animation:pop .25s ease}
+    @keyframes pop {0%{transform:scale(0) rotate(-180deg);opacity:0}50%{transform:scale(1.1) rotate(10deg)}100%{transform:scale(1) rotate(0deg);opacity:1}}
+    .pop{animation:pop .4s cubic-bezier(0.68, -0.55, 0.265, 1.55)}
 
     .shake{animation:shake .45s}
-    @keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}100%{transform:translateX(0)}}
+    @keyframes shake{0%{transform:translateX(0) rotate(0deg)}10%{transform:translateX(-10px) rotate(-5deg)}20%{transform:translateX(10px) rotate(5deg)}30%{transform:translateX(-10px) rotate(-5deg)}40%{transform:translateX(10px) rotate(5deg)}50%{transform:translateX(-10px) rotate(-5deg)}60%{transform:translateX(10px) rotate(5deg)}70%{transform:translateX(-10px) rotate(-5deg)}80%{transform:translateX(10px) rotate(5deg)}90%{transform:translateX(-10px) rotate(-5deg)}100%{transform:translateX(0) rotate(0deg)}}
 
-    .centered-overlay{position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center}
-    .dialog{background:#fff;padding:22px;border-radius:14px;min-width:320px}
+    .centered-overlay{position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);z-index:1000}
+    .dialog{background:linear-gradient(135deg,#fff 0%,#f8f9fa 100%);padding:30px;border-radius:20px;min-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:dialogPop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)}
+    @keyframes dialogPop{0%{transform:scale(0.5) rotate(-10deg);opacity:0}100%{transform:scale(1) rotate(0deg);opacity:1}}
+    #dialogText{font-size:22px;font-weight:bold;color:#333;text-align:center;margin-bottom:20px}
+    .particle-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999}
+    .particle{position:absolute;font-size:30px;animation:particleFall 3s ease-out forwards}
+    @keyframes particleFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(360deg);opacity:0}}
+    .star{position:absolute;width:10px;height:10px;background:gold;clip-path:polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);animation:starTwinkle 1s ease-in-out infinite}
+    @keyframes starTwinkle{0%,100%{transform:scale(1) rotate(0deg);opacity:1}50%{transform:scale(1.5) rotate(180deg);opacity:0.5}}
 
   </style>
 </head>
@@ -75,8 +93,8 @@
         </div>
 
         <div class="footer small">
-          <div id="combo">连对：0</div>
-          <div id="roundInfo">第 0 / 10 轮</div>
+          <div id="combo">🔥 连对：0</div>
+          <div id="roundInfo">📍 第 0 / 10 轮</div>
         </div>
       </div>
 
@@ -96,10 +114,13 @@
     <div class="dialog" id="dialog">
       <div id="dialogText">通关！</div>
       <div style="margin-top:12px;text-align:right">
-        <button id="nextBtn">下一轮</button>
+        <button id="nextBtn">下一轮 ➜</button>
       </div>
     </div>
   </div>
+
+  <!-- particle effects -->
+  <div id="particles" class="particle-container"></div>
 
   <script>
     // 全局状态
@@ -145,17 +166,20 @@
     }
 
     function updateUIEmpty(){
-      $cards.innerHTML='';$answers.innerHTML='';$timer.textContent='--s';$progressBar.style.width='0%';$roundInfo.textContent='第 0 / 10 轮';$combo.textContent='连对：0';
+      $cards.innerHTML='';$answers.innerHTML='';$timer.textContent='--s';$progressBar.style.width='0%';$roundInfo.textContent='第 0 / 10 轮';$combo.textContent='🔥 连对：0';
+      document.getElementById('particles').innerHTML = '';
     }
 
     function renderRound(){
       if(curRound>=totalRounds){
-        showOverlay('全部完成！恭喜你 🎉', false);
+        createCelebration();
+        showOverlay('🏆 全部完成！恭喜你通关 🎉', false);
         return;
       }
       const round = rounds[curRound];
       $cards.innerHTML=''; $answers.innerHTML='';
-      $roundInfo.textContent = `第 ${curRound+1} / ${totalRounds} 轮`;
+      document.getElementById('particles').innerHTML = '';
+      $roundInfo.textContent = `📍 第 ${curRound+1} / ${totalRounds} 轮`;
 
       // render cards
       round.items.forEach((it, idx)=>{
@@ -237,16 +261,69 @@
         // disable interactions for this card
         card.removeEventListener('click', ()=>onCardClick(card));
         card.removeEventListener('drop', onCardDrop);
+        // 添加成功特效
+        createSuccessEffect(card);
+        createStars(card);
         checkRoundComplete();
       }else{
         // wrong
         card.classList.add('wrong');
         card.classList.add('shake');
+        createErrorEffect(card);
         setTimeout(()=>{card.classList.remove('shake');card.classList.remove('wrong')},450);
         // fail round
-        failRound('配对错误，挑战失败！');
+        failRound('❌ 配对错误，挑战失败！');
       }
       clearCardSelection();
+    }
+
+    // 创建成功特效
+    function createSuccessEffect(element){
+      const rect = element.getBoundingClientRect();
+      const emojis = ['✨', '⭐', '💫', '🌟', '✅', '🎉'];
+      for(let i=0; i<8; i++){
+        setTimeout(()=>{
+          const particle = document.createElement('div');
+          particle.className = 'particle';
+          particle.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+          particle.style.left = rect.left + rect.width/2 + 'px';
+          particle.style.top = rect.top + rect.height/2 + 'px';
+          particle.style.animationDelay = `${i*0.05}s`;
+          document.getElementById('particles').appendChild(particle);
+          setTimeout(()=>particle.remove(), 3000);
+        }, i*50);
+      }
+    }
+
+    // 创建星星特效
+    function createStars(element){
+      const rect = element.getBoundingClientRect();
+      for(let i=0; i<12; i++){
+        const star = document.createElement('div');
+        star.className = 'star';
+        const angle = (Math.PI * 2 * i) / 12;
+        const distance = 50 + Math.random()*30;
+        star.style.left = rect.left + rect.width/2 + Math.cos(angle)*distance + 'px';
+        star.style.top = rect.top + rect.height/2 + Math.sin(angle)*distance + 'px';
+        star.style.animationDelay = `${i*0.1}s`;
+        document.getElementById('particles').appendChild(star);
+        setTimeout(()=>star.remove(), 1000);
+      }
+    }
+
+    // 创建错误特效
+    function createErrorEffect(element){
+      const rect = element.getBoundingClientRect();
+      const emojis = ['💥', '❌', '😢'];
+      for(let i=0; i<5; i++){
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+        particle.style.left = rect.left + rect.width/2 + 'px';
+        particle.style.top = rect.top + rect.height/2 + 'px';
+        document.getElementById('particles').appendChild(particle);
+        setTimeout(()=>particle.remove(), 3000);
+      }
     }
 
     function checkRoundComplete(){
@@ -254,16 +331,21 @@
       if(remaining===0){
         // success
         combo += 1;
-        $combo.textContent = `连对：${combo}`;
+        $combo.textContent = `🔥 连对：${combo}`;
         // small reward: +1s if combo multiple of 5
-        if(combo>0 && combo%5===0) timeLeft += 1;
-        showOverlay('本轮通过！继续下一轮？', true);
+        if(combo>0 && combo%5===0) {
+          timeLeft += 1;
+          showFloatingText('⏱️ +1秒奖励！', '#4CAF50');
+        }
+        // 创建庆祝效果
+        createCelebration();
+        showOverlay('🎉 本轮通过！继续下一轮？', true);
         stopTimer();
       }
     }
 
     function failRound(msg){
-      combo = 0; $combo.textContent = `连对：${combo}`;
+      combo = 0; $combo.textContent = `🔥 连对：${combo}`;
       stopTimer();
       showOverlay(msg, false);
       // 2秒后自动重置游戏
@@ -272,6 +354,46 @@
         resetGame();
       }, 2000);
     }
+
+    // 创建庆祝效果
+    function createCelebration(){
+      const emojis = ['🎉', '🎊', '🎈', '🎁', '🌟', '⭐', '✨', '💫', '🏆'];
+      for(let i=0; i<30; i++){
+        setTimeout(()=>{
+          const particle = document.createElement('div');
+          particle.className = 'particle';
+          particle.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+          particle.style.left = Math.random()*window.innerWidth + 'px';
+          particle.style.top = '-50px';
+          particle.style.animationDuration = (2 + Math.random()*2) + 's';
+          document.getElementById('particles').appendChild(particle);
+          setTimeout(()=>particle.remove(), 5000);
+        }, i*100);
+      }
+    }
+
+    // 显示浮动文字
+    function showFloatingText(text, color){
+      const floatText = document.createElement('div');
+      floatText.textContent = text;
+      floatText.style.position = 'fixed';
+      floatText.style.left = '50%';
+      floatText.style.top = '30%';
+      floatText.style.transform = 'translateX(-50%)';
+      floatText.style.fontSize = '28px';
+      floatText.style.fontWeight = 'bold';
+      floatText.style.color = color;
+      floatText.style.textShadow = '2px 2px 4px rgba(0,0,0,0.3)';
+      floatText.style.zIndex = '1001';
+      floatText.style.animation = 'floatUp 2s ease-out forwards';
+      document.body.appendChild(floatText);
+      setTimeout(()=>floatText.remove(), 2000);
+    }
+
+    // 添加浮动动画
+    const style = document.createElement('style');
+    style.textContent = '@keyframes floatUp{0%{transform:translateX(-50%) translateY(0);opacity:1}100%{transform:translateX(-50%) translateY(-100px);opacity:0}}';
+    document.head.appendChild(style);
 
     function startTimer(sec){
       stopTimer();

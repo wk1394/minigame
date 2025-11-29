@@ -7,7 +7,7 @@
     body {
         margin: 0;
         font-family: "Comic Sans MS", sans-serif;
-        background: #b9e8ff;
+        background: linear-gradient(135deg, #b9e8ff 0%, #87CEEB 100%);
         overflow: hidden;
     }
     #game {
@@ -46,6 +46,68 @@
         50% { transform: scale(1.5) rotate(10deg); opacity: 0.7; }
         100% { transform: scale(2) rotate(20deg); opacity: 0; }
     }
+    @keyframes shake {
+        0%, 100% { transform: translateX(0) rotate(0deg); }
+        10% { transform: translateX(-5px) rotate(-2deg); }
+        20% { transform: translateX(5px) rotate(2deg); }
+        30% { transform: translateX(-5px) rotate(-2deg); }
+        40% { transform: translateX(5px) rotate(2deg); }
+        50% { transform: translateX(-5px) rotate(-2deg); }
+        60% { transform: translateX(5px) rotate(2deg); }
+        70% { transform: translateX(-5px) rotate(-2deg); }
+        80% { transform: translateX(5px) rotate(2deg); }
+        90% { transform: translateX(-5px) rotate(-2deg); }
+    }
+    @keyframes cheer {
+        0%, 100% { transform: translateY(0) scale(1) rotate(0deg); }
+        25% { transform: translateY(-20px) scale(1.1) rotate(-5deg); }
+        50% { transform: translateY(-10px) scale(1.05) rotate(5deg); }
+        75% { transform: translateY(-15px) scale(1.08) rotate(-3deg); }
+    }
+    @keyframes fear {
+        0% { transform: scale(1); }
+        25% { transform: scale(0.9) translateY(5px); }
+        50% { transform: scale(0.85) translateY(8px); }
+        75% { transform: scale(0.9) translateY(5px); }
+        100% { transform: scale(1); }
+    }
+    @keyframes cry {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(-10deg); }
+        75% { transform: rotate(10deg); }
+    }
+    #playerDino {
+        position: absolute;
+        left: 100px;
+        bottom: 30%;
+        font-size: 120px;
+        z-index: 25;
+        animation: shake 2s infinite ease-in-out;
+        transition: all 0.3s;
+        filter: drop-shadow(0 5px 10px rgba(0,0,0,0.3));
+    }
+    #playerDino.cheer {
+        animation: cheer 0.8s ease-in-out 3;
+    }
+    #playerDino.fear {
+        animation: fear 0.3s ease-in-out infinite;
+    }
+    #playerDino.cry {
+        animation: cry 0.5s ease-in-out infinite;
+    }
+    .emotion {
+        position: absolute;
+        top: -60px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 40px;
+        animation: emotionPop 1s ease-out;
+    }
+    @keyframes emotionPop {
+        0% { transform: translateX(-50%) scale(0); opacity: 0; }
+        50% { transform: translateX(-50%) scale(1.2); opacity: 1; }
+        100% { transform: translateX(-50%) scale(1); opacity: 1; }
+    }
     #answers {
         position: absolute;
         left: 20px;
@@ -58,15 +120,22 @@
     }
     .ans-btn {
         padding: 15px 25px;
-        background: #fff;
+        background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
         border-radius: 12px;
         font-size: 20px;
         cursor: pointer;
         border: 3px solid #333;
-        transition: 0.2s;
+        transition: all 0.3s;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        font-weight: bold;
     }
     .ans-btn:hover {
-        background: #ffe08a;
+        background: linear-gradient(135deg, #ffe08a 0%, #ffd700 100%);
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+    .ans-btn:active {
+        transform: translateY(0) scale(0.98);
     }
     .bullet {
         position: absolute;
@@ -88,11 +157,14 @@
         left: 50%;
         transform: translateX(-50%);
         font-size: 32px;
-        background: rgba(255,255,255,0.8);
-        padding: 10px 30px;
-        border-radius: 15px;
-        border: 3px solid #444;
+        background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(240,240,240,0.95) 100%);
+        padding: 15px 40px;
+        border-radius: 20px;
+        border: 4px solid #333;
         z-index: 20;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        font-weight: bold;
+        color: #333;
     }
     #resetBtn {
         position: absolute;
@@ -112,14 +184,49 @@
         background: #66bb6a;
         transform: scale(1.05);
     }
+    #scoreDisplay {
+        position: absolute;
+        top: 90px;
+        right: 20px;
+        background: linear-gradient(135deg, rgba(255,215,0,0.9) 0%, rgba(255,165,0,0.9) 100%);
+        padding: 15px 30px;
+        border-radius: 15px;
+        border: 3px solid #ff8c00;
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+        z-index: 20;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    .fire-effect {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 30;
+    }
+    .firework {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        animation: fireworkAnim 1s ease-out forwards;
+    }
+    @keyframes fireworkAnim {
+        0% { transform: translate(0, 0) scale(1); opacity: 1; }
+        100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+    }
 </style>
 </head>
 <body>
 
 <div id="game">
     <div id="questionBox"></div>
+    <div id="playerDino">🦖</div>
     <div id="answers"></div>
     <button id="resetBtn">🔄 重置游戏</button>
+    <div id="scoreDisplay">⭐ 得分: <span id="score">0</span></div>
+    <div class="fire-effect" id="fireEffect"></div>
 </div>
 
 <script>
@@ -178,6 +285,8 @@ function generateQuestions(count = 10) {
 
 let questions = generateQuestions(10);
 let qi = 0;
+let score = 0;
+let correctStreak = 0;
 
 function loadQuestion() {
     const qData = questions[qi];
@@ -223,9 +332,18 @@ function moveMonster() {
 
     currentMonster.style.left = monsterX + "px";
 
+    if (monsterX < 180) {
+        const playerDino = document.getElementById('playerDino');
+        playerDino.className = 'cry';
+        showEmotion('😭');
+    }
+
     if (monsterX < 80) {
-        alert("❌ 游戏失败：恐龙吃掉了蛋！");
-        location.reload();
+        moving = false;
+        setTimeout(() => {
+            alert(`❌ 游戏失败：恐龙被吃掉了！\n\n本局得分: ${score}分\n答对题数: ${qi}题`);
+            resetGame();
+        }, 300);
         return;
     }
 
@@ -289,32 +407,154 @@ function killMonster(monster) {
     moving = false;
 
     monster.style.animation = "explode 0.6s forwards";
+    
+    // 创建爆炸粒子
+    createExplosion(monster);
 
     setTimeout(() => monster.remove(), 500);
 
     setTimeout(() => nextQuestion(), 600);
 }
 
+function createExplosion(monster) {
+    const rect = monster.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    for (let i = 0; i < 30; i++) {
+        const particle = document.createElement('div');
+        particle.style.position = 'absolute';
+        particle.style.width = '10px';
+        particle.style.height = '10px';
+        particle.style.borderRadius = '50%';
+        particle.style.background = ['#FF6B6B', '#FFD700', '#FF8C00', '#FF4500'][Math.floor(Math.random() * 4)];
+        particle.style.left = centerX + 'px';
+        particle.style.top = centerY + 'px';
+        particle.style.zIndex = '15';
+        particle.style.pointerEvents = 'none';
+        
+        const angle = (Math.PI * 2 * i) / 30;
+        const velocity = 100 + Math.random() * 100;
+        const tx = Math.cos(angle) * velocity;
+        const ty = Math.sin(angle) * velocity;
+        
+        particle.style.setProperty('--tx', tx + 'px');
+        particle.style.setProperty('--ty', ty + 'px');
+        particle.style.animation = 'fireworkAnim 0.8s ease-out forwards';
+        
+        document.getElementById('game').appendChild(particle);
+        
+        setTimeout(() => particle.remove(), 800);
+    }
+}
+
 function checkAnswer(idx) {
     const qData = questions[qi];
+    const playerDino = document.getElementById('playerDino');
+    
     if (idx === qData.right) {
+        // 正确答案
+        correctStreak++;
+        const points = 10 + (correctStreak - 1) * 5; // 连击奖励
+        score += points;
+        updateScore();
+        
+        // 小恐龙欢呼
+        playerDino.className = 'cheer';
+        showEmotion('😄');
+        createFireworks();
+        
         // 获取点击按钮的位置
         const answerBtns = document.querySelectorAll('.ans-btn');
         const clickedBtn = answerBtns[idx];
         const btnRect = clickedBtn.getBoundingClientRect();
+        clickedBtn.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
+        clickedBtn.style.color = 'white';
 
         fireBullet(currentMonster, btnRect.left, btnRect.top + btnRect.height / 2);
+        
+        setTimeout(() => {
+            playerDino.className = '';
+        }, 2400);
     } else {
+        // 错误答案
+        correctStreak = 0;
+        score = Math.max(0, score - 5);
+        updateScore();
+        
+        // 小恐龙恐惧
+        playerDino.className = 'fear';
+        showEmotion('😱');
+        
+        // 按钮震动效果
+        const answerBtns = document.querySelectorAll('.ans-btn');
+        const clickedBtn = answerBtns[idx];
+        clickedBtn.style.background = 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)';
+        clickedBtn.style.color = 'white';
+        
+        setTimeout(() => {
+            clickedBtn.style.background = '';
+            clickedBtn.style.color = '';
+        }, 500);
+        
         // 错误则怪兽加速
         currentMonster.dataset.speed *= 1.5;
+        
+        setTimeout(() => {
+            playerDino.className = '';
+        }, 1500);
+    }
+}
+
+function updateScore() {
+    document.getElementById('score').textContent = score;
+}
+
+function showEmotion(emoji) {
+    const playerDino = document.getElementById('playerDino');
+    const emotion = document.createElement('div');
+    emotion.className = 'emotion';
+    emotion.textContent = emoji;
+    playerDino.appendChild(emotion);
+    
+    setTimeout(() => emotion.remove(), 1000);
+}
+
+function createFireworks() {
+    const fireEffect = document.getElementById('fireEffect');
+    const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#FF69B4'];
+    
+    for (let i = 0; i < 20; i++) {
+        setTimeout(() => {
+            const firework = document.createElement('div');
+            firework.className = 'firework';
+            firework.style.left = '150px';
+            firework.style.bottom = '40%';
+            firework.style.background = colors[Math.floor(Math.random() * colors.length)];
+            
+            const angle = (Math.PI * 2 * i) / 20;
+            const distance = 100 + Math.random() * 50;
+            firework.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+            firework.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+            
+            fireEffect.appendChild(firework);
+            
+            setTimeout(() => firework.remove(), 1000);
+        }, i * 50);
     }
 }
 
 function nextQuestion() {
     qi++;
     if (qi >= questions.length) {
-        alert("🎉 恭喜全部答对！");
-        resetGame();
+        const playerDino = document.getElementById('playerDino');
+        playerDino.className = 'cheer';
+        showEmotion('🎉');
+        
+        setTimeout(() => {
+            alert(`🎉 恭喜全部答对！\n\n最终得分: ${score}分\n答对题数: ${questions.length}题`);
+            resetGame();
+        }, 500);
         return;
     }
     monsterX = window.innerWidth - 150;
@@ -330,14 +570,22 @@ function resetGame() {
         currentMonster = null;
     }
     
-    // 清除所有子弹
+    // 清除所有子弹和粒子
     document.querySelectorAll('.bullet').forEach(b => b.remove());
+    document.querySelectorAll('.firework').forEach(f => f.remove());
     
-    // 重新生成题库
+    // 重置游戏状态
     questions = generateQuestions(10);
     qi = 0;
+    score = 0;
+    correctStreak = 0;
+    updateScore();
     monsterX = window.innerWidth - 150;
     moving = false;
+    
+    // 重置小恐龙状态
+    const playerDino = document.getElementById('playerDino');
+    playerDino.className = '';
     
     // 重新开始游戏
     loadQuestion();
