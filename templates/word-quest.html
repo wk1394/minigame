@@ -75,6 +75,7 @@
       <div class="controls">
         <button id="btnStart">开始游戏</button>
         <button id="btnReset" class="secondary">重置</button>
+        <button id="btnSound" class="secondary">🔊 音效</button>
         <button id="btnAdmin" class="secondary">词库管理</button>
       </div>
     </div>
@@ -123,6 +124,129 @@
   <div id="particles" class="particle-container"></div>
 
   <script>
+    // 音频上下文
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    let soundEnabled = true;
+    
+    // 音效函数
+    function playSound(type) {
+      if (!soundEnabled) return;
+      
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      const now = audioContext.currentTime;
+      
+      switch(type) {
+        case 'correct': // 正确 - 欢快的上升音
+          oscillator.frequency.setValueAtTime(523, now); // C5
+          oscillator.frequency.exponentialRampToValueAtTime(659, now + 0.08); // E5
+          oscillator.frequency.exponentialRampToValueAtTime(784, now + 0.16); // G5
+          oscillator.frequency.exponentialRampToValueAtTime(1047, now + 0.24); // C6
+          gainNode.gain.setValueAtTime(0.3, now);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+          oscillator.type = 'sine';
+          oscillator.start(now);
+          oscillator.stop(now + 0.3);
+          break;
+          
+        case 'wrong': // 错误 - 柔和的提示音
+          oscillator.frequency.setValueAtTime(350, now);
+          oscillator.frequency.exponentialRampToValueAtTime(200, now + 0.25);
+          gainNode.gain.setValueAtTime(0.25, now);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+          oscillator.type = 'sine';
+          oscillator.start(now);
+          oscillator.stop(now + 0.25);
+          break;
+          
+        case 'click': // 点击
+          oscillator.frequency.setValueAtTime(700, now);
+          gainNode.gain.setValueAtTime(0.15, now);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+          oscillator.type = 'sine';
+          oscillator.start(now);
+          oscillator.stop(now + 0.05);
+          break;
+          
+        case 'select': // 选中卡片
+          oscillator.frequency.setValueAtTime(800, now);
+          gainNode.gain.setValueAtTime(0.12, now);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+          oscillator.type = 'sine';
+          oscillator.start(now);
+          oscillator.stop(now + 0.08);
+          break;
+          
+        case 'complete': // 完成关卡 - 胜利旋律
+          const melody = [
+            {freq: 523, time: 0},      // C5
+            {freq: 659, time: 0.15},   // E5
+            {freq: 784, time: 0.3},    // G5
+            {freq: 1047, time: 0.45},  // C6
+            {freq: 784, time: 0.6},    // G5
+            {freq: 1047, time: 0.75}   // C6
+          ];
+          melody.forEach(note => {
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.frequency.value = note.freq;
+            gain.gain.setValueAtTime(0.2, now + note.time);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + note.time + 0.2);
+            osc.start(now + note.time);
+            osc.stop(now + note.time + 0.2);
+          });
+          return;
+          
+        case 'fail': // 失败
+          oscillator.frequency.setValueAtTime(300, now);
+          oscillator.frequency.exponentialRampToValueAtTime(150, now + 0.4);
+          gainNode.gain.setValueAtTime(0.2, now);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+          oscillator.type = 'sine';
+          oscillator.start(now);
+          oscillator.stop(now + 0.4);
+          break;
+          
+        case 'victory': // 全部通关
+          const victoryMelody = [
+            {freq: 523, time: 0},
+            {freq: 587, time: 0.12},
+            {freq: 659, time: 0.24},
+            {freq: 698, time: 0.36},
+            {freq: 784, time: 0.48},
+            {freq: 880, time: 0.6},
+            {freq: 988, time: 0.72},
+            {freq: 1047, time: 0.84}
+          ];
+          victoryMelody.forEach(note => {
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.frequency.value = note.freq;
+            gain.gain.setValueAtTime(0.18, now + note.time);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + note.time + 0.15);
+            osc.start(now + note.time);
+            osc.stop(now + note.time + 0.15);
+          });
+          return;
+          
+        case 'timer': // 时间警告
+          oscillator.frequency.setValueAtTime(880, now);
+          gainNode.gain.setValueAtTime(0.2, now);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+          oscillator.type = 'sine';
+          oscillator.start(now);
+          oscillator.stop(now + 0.1);
+          break;
+      }
+    }
+    
     // 全局状态
     let rounds = [];
     let curRound = 0;
@@ -141,8 +265,14 @@
     const $dialogText = document.getElementById('dialogText');
     const $nextBtn = document.getElementById('nextBtn');
 
-    document.getElementById('btnStart').addEventListener('click', startGame);
-    document.getElementById('btnReset').addEventListener('click', resetGame);
+    document.getElementById('btnStart').addEventListener('click', () => {
+      playSound('click');
+      startGame();
+    });
+    document.getElementById('btnReset').addEventListener('click', () => {
+      playSound('click');
+      resetGame();
+    });
     document.getElementById('nextBtn').addEventListener('click', ()=>{hideOverlay(); nextRound()});
 
     // Fetch rounds from backend
@@ -172,6 +302,8 @@
 
     function renderRound(){
       if(curRound>=totalRounds){
+        // 播放胜利音效
+        playSound('victory');
         createCelebration();
         showOverlay('🏆 全部完成！恭喜你通关 🎉', false);
         return;
@@ -231,6 +363,8 @@
     // 点击题卡后，再点答案的交互
     let _selectedCard = null;
     function onCardClick(card){
+      // 播放选中音效
+      playSound('select');
       // 选中卡片
       clearCardSelection();
       _selectedCard = card;
@@ -243,6 +377,7 @@
 
     function onAnswerClick(answer){
       if(_selectedCard){
+        playSound('click');
         tryMatch(_selectedCard, answer.dataset.value, answer);
       }
     }
@@ -250,6 +385,8 @@
     function tryMatch(card, val, answerElem=null){
       const missing = card.dataset.missing;
       if(val === missing){
+        // 播放正确音效
+        playSound('correct');
         // correct
         card.classList.add('correct');
         card.innerHTML = `<div>${escapeHtml(card.textContent.replace('_', val))}</div>`;
@@ -266,6 +403,8 @@
         createStars(card);
         checkRoundComplete();
       }else{
+        // 播放错误音效
+        playSound('wrong');
         // wrong
         card.classList.add('wrong');
         card.classList.add('shake');
@@ -329,6 +468,8 @@
     function checkRoundComplete(){
       const remaining = document.querySelectorAll('.card:not(.correct)').length;
       if(remaining===0){
+        // 播放完成音效
+        playSound('complete');
         // success
         combo += 1;
         $combo.textContent = `🔥 连对：${combo}`;
@@ -345,6 +486,8 @@
     }
 
     function failRound(msg){
+      // 播放失败音效
+      playSound('fail');
       combo = 0; $combo.textContent = `🔥 连对：${combo}`;
       stopTimer();
       showOverlay(msg, false);
@@ -402,7 +545,12 @@
       timer = setInterval(()=>{
         t -= 1;
         $timer.textContent = `${t}s`;
-        if(t<=3) $timer.style.color = '#F44336'; else $timer.style.color='#333';
+        if(t<=3) {
+          $timer.style.color = '#F44336';
+          playSound('timer'); // 时间警告音效
+        } else {
+          $timer.style.color='#333';
+        }
         if(t<=0){
           stopTimer();
           failRound('时间到，本轮失败');
@@ -451,8 +599,17 @@
       }
     });
 
+    // 音效开关按钮
+    document.getElementById('btnSound').addEventListener('click', ()=>{
+      soundEnabled = !soundEnabled;
+      const btn = document.getElementById('btnSound');
+      btn.textContent = soundEnabled ? '🔊 音效' : '🔇 静音';
+      if (soundEnabled) playSound('click');
+    });
+    
     // 词库管理按钮
     document.getElementById('btnAdmin').addEventListener('click', ()=>{
+      playSound('click');
       window.location.href = '/admin';
     });
 

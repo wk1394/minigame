@@ -77,6 +77,10 @@ h1 {
     background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
     color: white;
 }
+#soundBtn {
+    background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+    color: white;
+}
 #words {
     display: flex;
     flex-wrap: wrap;
@@ -213,6 +217,7 @@ h1 {
     <div id="controls">
         <button class="btn" id="resetBtn">🔄 重新开始</button>
         <button class="btn" id="difficultyBtn">⚙️ 难度: 简单</button>
+        <button class="btn" id="soundBtn">🔊 音效</button>
     </div>
     
     <div id="timer">⏱️ 时间: 00:00</div>
@@ -230,6 +235,104 @@ h1 {
 <div id="particles"></div>
 
 <script>
+// 音频上下文
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let soundEnabled = true;
+
+// 音效函数
+function playSound(type) {
+    if (!soundEnabled) return;
+    
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    const now = audioContext.currentTime;
+    
+    switch(type) {
+        case 'correct': // 正确 - 欢快的上升音
+            oscillator.frequency.setValueAtTime(523, now); // C5
+            oscillator.frequency.exponentialRampToValueAtTime(659, now + 0.08); // E5
+            oscillator.frequency.exponentialRampToValueAtTime(784, now + 0.16); // G5
+            oscillator.frequency.exponentialRampToValueAtTime(1047, now + 0.24); // C6
+            gainNode.gain.setValueAtTime(0.3, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            oscillator.type = 'sine';
+            oscillator.start(now);
+            oscillator.stop(now + 0.3);
+            break;
+            
+        case 'wrong': // 错误 - 柔和的提示音
+            oscillator.frequency.setValueAtTime(300, now);
+            oscillator.frequency.exponentialRampToValueAtTime(200, now + 0.2);
+            gainNode.gain.setValueAtTime(0.2, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            oscillator.type = 'sine';
+            oscillator.start(now);
+            oscillator.stop(now + 0.2);
+            break;
+            
+        case 'pickup': // 拾取单词 - 轻快的音效
+            oscillator.frequency.setValueAtTime(800, now);
+            gainNode.gain.setValueAtTime(0.15, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+            oscillator.type = 'sine';
+            oscillator.start(now);
+            oscillator.stop(now + 0.08);
+            break;
+            
+        case 'drop': // 放下单词 - 轻柔的音效
+            oscillator.frequency.setValueAtTime(600, now);
+            gainNode.gain.setValueAtTime(0.1, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            oscillator.type = 'sine';
+            oscillator.start(now);
+            oscillator.stop(now + 0.1);
+            break;
+            
+        case 'complete': // 完成 - 胜利旋律
+            const melody = [
+                {freq: 523, time: 0},      // C5
+                {freq: 659, time: 0.15},   // E5
+                {freq: 784, time: 0.3},    // G5
+                {freq: 1047, time: 0.45},  // C6
+                {freq: 784, time: 0.6},    // G5
+                {freq: 1047, time: 0.75}   // C6
+            ];
+            melody.forEach(note => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.frequency.value = note.freq;
+                gain.gain.setValueAtTime(0.2, now + note.time);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + note.time + 0.2);
+                osc.start(now + note.time);
+                osc.stop(now + note.time + 0.2);
+            });
+            return;
+            
+        case 'click': // 点击按钮 - 轻快的反馈音
+            oscillator.frequency.setValueAtTime(700, now);
+            gainNode.gain.setValueAtTime(0.15, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+            oscillator.type = 'sine';
+            oscillator.start(now);
+            oscillator.stop(now + 0.05);
+            break;
+            
+        case 'dragover': // 拖动悬停 - 微妙的提示音
+            oscillator.frequency.setValueAtTime(400, now);
+            gainNode.gain.setValueAtTime(0.08, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+            oscillator.type = 'sine';
+            oscillator.start(now);
+            oscillator.stop(now + 0.05);
+            break;
+    }
+}
+
 // 完整的单词库
 const allWordsData = {
     fruit: ["apple", "banana", "orange", "grape", "mango", "peach", "pear", "lemon", "cherry", "strawberry", "watermelon", "pineapple"],
@@ -305,6 +408,9 @@ function generateGame() {
         
         div.addEventListener('dragover', e => {
             e.preventDefault();
+            if (!div.classList.contains('drag-over')) {
+                playSound('dragover');
+            }
             div.classList.add('drag-over');
         });
         div.addEventListener('dragleave', () => {
@@ -344,6 +450,7 @@ function generateGame() {
         div.addEventListener('dragstart', e => {
             e.dataTransfer.setData('word', item.word);
             e.dataTransfer.setData('category', item.category);
+            playSound('pickup');
         });
         
         wordsDiv.appendChild(div);
@@ -367,6 +474,9 @@ function handleDrop(e, categoryDiv) {
     if (!wordDiv || wordDiv.classList.contains('finished')) return;
     
     if (wordCategory === targetCategory) {
+        // 正确音效
+        playSound('correct');
+        
         // 正确
         score += 10 * (difficulty === 'easy' ? 1 : difficulty === 'medium' ? 1.5 : 2);
         correctCount++;
@@ -381,6 +491,9 @@ function handleDrop(e, categoryDiv) {
         // 检查是否完成
         checkCompletion();
     } else {
+        // 错误音效
+        playSound('wrong');
+        
         // 错误
         wrongCount++;
         score = Math.max(0, score - 5);
@@ -426,6 +539,8 @@ function checkCompletion() {
     const remainingWords = document.querySelectorAll('.word:not(.finished)');
     if (remainingWords.length === 0) {
         clearInterval(timerInterval);
+        // 完成音效
+        playSound('complete');
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         setTimeout(() => {
             alert(`🎉 恭喜完成！\n得分: ${Math.round(score)}\n正确: ${correctCount}\n错误: ${wrongCount}\n用时: ${elapsed}秒`);
@@ -451,8 +566,24 @@ function changeDifficulty() {
 }
 
 // 初始化
-document.getElementById('resetBtn').onclick = resetGame;
-document.getElementById('difficultyBtn').onclick = changeDifficulty;
+document.getElementById('resetBtn').onclick = () => {
+    playSound('click');
+    resetGame();
+};
+
+document.getElementById('difficultyBtn').onclick = () => {
+    playSound('click');
+    changeDifficulty();
+};
+
+// 音效开关
+document.getElementById('soundBtn').onclick = () => {
+    soundEnabled = !soundEnabled;
+    const btn = document.getElementById('soundBtn');
+    btn.textContent = soundEnabled ? '🔊 音效' : '🔇 静音';
+    if (soundEnabled) playSound('click');
+};
+
 generateGame();
 </script>
 

@@ -65,6 +65,24 @@
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
         }
         
+        .sound-btn {
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            font-size: 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .sound-btn:hover {
+            background-color: #ff8e8e;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+        
         .game-board {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
@@ -211,6 +229,7 @@
     <div class="game-info">
         <div class="timer">用时: <span id="time">00:00</span></div>
         <button class="restart-btn" id="restartBtn">重新开始</button>
+        <button class="sound-btn" id="soundBtn">🔊 音效</button>
         <div class="pairs">已配对: <span id="pairs">0</span>/10</div>
     </div>
     
@@ -227,6 +246,108 @@
     </div>
 
     <script>
+        // 音频上下文
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let soundEnabled = true;
+        
+        // 音效函数
+        function playSound(type) {
+            if (!soundEnabled) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            const now = audioContext.currentTime;
+            
+            switch(type) {
+                case 'select': // 选中泡泡 - 轻快的点击音
+                    oscillator.frequency.setValueAtTime(800, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+                    gainNode.gain.setValueAtTime(0.2, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    oscillator.type = 'sine';
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.1);
+                    break;
+                    
+                case 'match': // 匹配成功 - 欢快的上升音
+                    const matchMelody = [
+                        {freq: 523, time: 0},      // C5
+                        {freq: 659, time: 0.1},    // E5
+                        {freq: 784, time: 0.2},    // G5
+                    ];
+                    matchMelody.forEach(note => {
+                        const osc = audioContext.createOscillator();
+                        const gain = audioContext.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioContext.destination);
+                        osc.frequency.value = note.freq;
+                        gain.gain.setValueAtTime(0.25, now + note.time);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + note.time + 0.15);
+                        osc.type = 'sine';
+                        osc.start(now + note.time);
+                        osc.stop(now + note.time + 0.15);
+                    });
+                    return;
+                    
+                case 'wrong': // 匹配错误 - 柔和的下降音
+                    oscillator.frequency.setValueAtTime(400, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(250, now + 0.25);
+                    gainNode.gain.setValueAtTime(0.2, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    oscillator.type = 'sine';
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.25);
+                    break;
+                    
+                case 'pop': // 泡泡消失 - 轻盈的泡泡爆炸音
+                    oscillator.frequency.setValueAtTime(1200, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+                    gainNode.gain.setValueAtTime(0.15, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    oscillator.type = 'sine';
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.2);
+                    break;
+                    
+                case 'victory': // 胜利 - 欢快的旋律
+                    const victoryMelody = [
+                        {freq: 523, time: 0},      // C5
+                        {freq: 587, time: 0.15},   // D5
+                        {freq: 659, time: 0.3},    // E5
+                        {freq: 698, time: 0.45},   // F5
+                        {freq: 784, time: 0.6},    // G5
+                        {freq: 1047, time: 0.75},  // C6
+                        {freq: 784, time: 0.9},    // G5
+                        {freq: 1047, time: 1.05}   // C6
+                    ];
+                    victoryMelody.forEach(note => {
+                        const osc = audioContext.createOscillator();
+                        const gain = audioContext.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioContext.destination);
+                        osc.frequency.value = note.freq;
+                        gain.gain.setValueAtTime(0.2, now + note.time);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + note.time + 0.2);
+                        osc.type = 'sine';
+                        osc.start(now + note.time);
+                        osc.stop(now + note.time + 0.2);
+                    });
+                    return;
+                    
+                case 'click': // 按钮点击
+                    oscillator.frequency.setValueAtTime(600, now);
+                    gainNode.gain.setValueAtTime(0.15, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                    oscillator.type = 'sine';
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.05);
+                    break;
+            }
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
             const gameBoard = document.getElementById('gameBoard');
             const timeDisplay = document.getElementById('time');
@@ -235,6 +356,7 @@
             const finalTimeDisplay = document.getElementById('finalTime');
             const continueBtn = document.getElementById('continueBtn');
             const restartBtn = document.getElementById('restartBtn');
+            const soundBtn = document.getElementById('soundBtn');
             
             let selectedBubble = null;
             let matchedPairs = 0;
@@ -314,6 +436,9 @@
                 // 如果泡泡已经匹配，忽略点击
                 if (bubble.classList.contains('matched')) return;
                 
+                // 播放选中音效
+                playSound('select');
+                
                 // 如果已经选中了一个泡泡
                 if (selectedBubble) {
                     // 如果点击的是同一个泡泡，取消选择
@@ -327,8 +452,14 @@
                     const isMatch = checkMatch(selectedBubble, bubble);
                     
                     if (isMatch) {
+                        // 播放匹配成功音效
+                        playSound('match');
+                        
                         // 匹配成功
                         setTimeout(() => {
+                            // 播放泡泡消失音效
+                            playSound('pop');
+                            
                             selectedBubble.classList.add('matched');
                             bubble.classList.add('matched');
                             selectedBubble = null;
@@ -342,6 +473,9 @@
                             }
                         }, 300);
                     } else {
+                        // 播放错误音效
+                        playSound('wrong');
+                        
                         // 匹配失败
                         bubble.classList.add('selected');
                         setTimeout(() => {
@@ -411,14 +545,31 @@
             function endGame() {
                 clearInterval(timerInterval);
                 finalTimeDisplay.textContent = timeDisplay.textContent;
+                
+                // 播放胜利音效
+                setTimeout(() => playSound('victory'), 300);
+                
                 victoryScreen.style.display = 'flex';
             }
             
             // 继续挑战按钮事件
-            continueBtn.addEventListener('click', startGame);
+            continueBtn.addEventListener('click', () => {
+                playSound('click');
+                startGame();
+            });
 
             // 重新开始按钮事件
-            restartBtn.addEventListener('click', startGame);
+            restartBtn.addEventListener('click', () => {
+                playSound('click');
+                startGame();
+            });
+            
+            // 音效开关按钮
+            soundBtn.addEventListener('click', () => {
+                soundEnabled = !soundEnabled;
+                soundBtn.textContent = soundEnabled ? '🔊 音效' : '🔇 静音';
+                if (soundEnabled) playSound('click');
+            });
 
             // 初始化游戏
             startGame();
