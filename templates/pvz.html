@@ -345,14 +345,17 @@ function playSound(type) {
     }
 }
 
+// 计算怪兽移动距离，确保至少有400px的移动空间
+const monsterDistance = Math.max(400, window.innerWidth - 150);
+
 const monsters = [
-    { img: "/static/images/pvz/monster1.png", speed: (window.innerWidth - 150) / (10 * 60) }, // 10秒
-    { img: "/static/images/pvz/monster2.png", speed: (window.innerWidth - 150) / (10 * 60) }, // 10秒
-    { img: "/static/images/pvz/monster3.png", speed: (window.innerWidth - 150) / (10 * 60) }, // 10秒
+    { img: "/static/images/pvz/monster1.png", speed: monsterDistance / (6 * 60) }, // 6秒
+    { img: "/static/images/pvz/monster2.png", speed: monsterDistance / (6 * 60) }, // 6秒
+    { img: "/static/images/pvz/monster3.png", speed: monsterDistance / (6 * 60) }, // 6秒
 ];
 
 let currentMonster = null;
-let monsterX = window.innerWidth - 150;
+let monsterX = Math.max(400, window.innerWidth - 150);
 let moving = true;
 
 // 生成随机题库（100以内加减法）
@@ -494,7 +497,7 @@ function fireBullet(target, startX, startY) {
 
     const distanceX = targetX - (startX - 30);
     const distanceY = targetY - (startY - 30);
-    const duration = 120; // 120帧，约2秒，让移动更容易看到
+    const duration = 60; // 60帧，刚好1秒（60fps）
     const stepX = distanceX / duration;
     const stepY = distanceY / duration;
 
@@ -509,19 +512,14 @@ function fireBullet(target, startX, startY) {
         bullet.style.left = bx + "px";
         bullet.style.top = by + "px";
 
-        if (frame % 20 === 0) {
-            console.log("子弹位置:", { bx, by, frame });
-        }
-
         // 到达目标位置或超过时间
         if (frame >= duration) {
             clearInterval(timer);
-            console.log("子弹到达目标");
             bullet.remove();
             killMonster(target);
         }
 
-    }, 16); // 约60fps
+    }, 16); // 约60fps，确保1秒内到达
 }
 
 // 击杀怪兽
@@ -694,7 +692,7 @@ function nextQuestion() {
         }, 500);
         return;
     }
-    monsterX = window.innerWidth - 150;
+    monsterX = Math.max(400, window.innerWidth - 150);
     loadQuestion();
     spawnMonster();
 }
@@ -717,7 +715,7 @@ function resetGame() {
     score = 0;
     correctStreak = 0;
     updateScore();
-    monsterX = window.innerWidth - 150;
+    monsterX = Math.max(400, window.innerWidth - 150);
     moving = false;
     
     // 重置小恐龙状态

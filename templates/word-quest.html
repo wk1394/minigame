@@ -489,13 +489,9 @@
       // 播放失败音效
       playSound('fail');
       combo = 0; $combo.textContent = `🔥 连对：${combo}`;
-      stopTimer();
-      showOverlay(msg, false);
-      // 2秒后自动重置游戏
-      setTimeout(()=>{
-        hideOverlay();
-        resetGame();
-      }, 2000);
+      // 不停止计时器，让用户继续作答
+      // 显示提示信息但不进入下一轮
+      showFloatingText(msg, '#F44336');
     }
 
     // 创建庆祝效果
@@ -611,6 +607,13 @@
     document.getElementById('btnAdmin').addEventListener('click', ()=>{
       playSound('click');
       window.location.href = '/admin';
+    });
+
+    // 页面加载后自动开始游戏
+    window.addEventListener('load', ()=>{
+      setTimeout(()=>{
+        startGame();
+      }, 500);
     });
 
   </script>
