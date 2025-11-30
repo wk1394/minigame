@@ -360,15 +360,36 @@ function playSound(type) {
 const monsterDistance = Math.max(400, window.innerWidth - 150);
 
 const monsters = [
-    { img: "/static/images/pvz/monster1.png", speed: monsterDistance / (15 * 60), hitsNeeded: 1 }, // 怪兽1需要答对1题
-    { img: "/static/images/pvz/monster2.png", speed: monsterDistance / (15 * 60), hitsNeeded: 2 }, // 怪兽2需要答对2题
-    { img: "/static/images/pvz/monster3.png", speed: monsterDistance / (15 * 60), hitsNeeded: 3 }, // 怪兽3需要答对3题
+    { 
+        name: "NormalZombie",
+        img: "/static/images/pvz/NormalZombie.png", 
+        speed: monsterDistance / (15 * 60), // 基准速度，speed=1
+        hitsNeeded: 1,
+        type: "normal" // 普通僵尸：匀速移动
+    },
+    { 
+        name: "FlagZombie",
+        img: "/static/images/pvz/FlagZombie.png", 
+        speed: monsterDistance / (15 * 60) * 1.25, // speed=1.25，比普通僵尸快25%
+        hitsNeeded: 2,
+        type: "flag" // 旗帜僵尸：快速移动，有旗帜晃动效果
+    },
+    { 
+        name: "NewspaperZombie",
+        img: "/static/images/pvz/NewspaperZombie.png", 
+        speed: monsterDistance / (15 * 60), // 有报纸时基准速度
+        speedAngry: monsterDistance / (15 * 60) * 2.65, // 报纸掉落后speed=2.65
+        hitsNeeded: 3,
+        type: "newspaper", // 报纸僵尸：有报纸保护，打掉后加速
+        hasNewspaper: true
+    }
 ];
 
 let currentMonster = null;
 let monsterX = Math.max(400, window.innerWidth - 150);
 let moving = true;
 let monsterHits = 0; // 当前怪兽已被击中次数
+let monsterCount = 0; // 怪兽计数器，用于循环生成三种怪兽
 
 // 生成随机题库（100以内加减法）
 function generateQuestions(count = 10) {
@@ -448,7 +469,7 @@ function loadNextQuestion() {
 // 创建怪兽
 function spawnMonster() {
     // 按顺序循环生成怪兽（1->2->3->1->2->3...）
-    let monsterIndex = qi % monsters.length;
+    let monsterIndex = monsterCount % monsters.length;
     let m = monsters[monsterIndex];
 
     const img = document.createElement("img");
@@ -461,6 +482,19 @@ function spawnMonster() {
     img.dataset.speed = m.speed;
     img.dataset.hitsNeeded = m.hitsNeeded;
     img.dataset.currentHits = 0;
+    img.dataset.type = m.type;
+    img.dataset.name = m.name;
+    
+    // NewspaperZombie特殊属性
+    if (m.type === "newspaper") {
+        img.dataset.hasNewspaper = "true";
+        img.dataset.speedAngry = m.speedAngry; // 保存愤怒状态的速度
+    }
+
+    // 为FlagZombie添加旗帜晃动动画
+    if (m.type === "flag") {
+        img.style.animation = "shake 0.8s ease-in-out infinite";
+    }
 
     document.getElementById("game").appendChild(img);
     currentMonster = img;
@@ -474,7 +508,14 @@ function spawnMonster() {
 function moveMonster() {
     if (!moving || !currentMonster) return;
 
-    monsterX -= currentMonster.dataset.speed;
+    monsterX -= parseFloat(currentMonster.dataset.speed);
+
+    // FlagZombie添加晃动效果（模拟旗帜摆动）
+    if (currentMonster.dataset.type === "flag") {
+        const wobble = Math.sin(Date.now() / 150) * 5; // 更明显的上下晃动
+        const tilt = Math.sin(Date.now() / 180) * 3; // 轻微旋转
+        currentMonster.style.transform = `translateY(${wobble}px) rotate(${tilt}deg)`;
+    }
 
     currentMonster.style.left = monsterX + "px";
 
@@ -515,8 +556,26 @@ function fireBullet(target, startX, startY) {
     monsterHits++;
     const hitsNeeded = parseInt(target.dataset.hitsNeeded);
     
-    // 创建击中特效
-    createHitEffect(target);
+    // NewspaperZombie特殊处理：第一次击中打掉报纸
+    if (target.dataset.type === "newspaper" && target.dataset.hasNewspaper === "true") {
+        if (monsterHits === 1) {
+            // 打掉报纸
+            target.dataset.hasNewspaper = "false";
+            showNewspaperLost(target);
+            // 报纸掉落后进入愤怒状态（speed变为2.65）
+            target.dataset.speed = target.dataset.speedAngry;
+            // 切换到愤怒图片（无报纸状态）
+            target.src = "/static/images/pvz/NewspaperZombieAngry.png";
+            target.style.filter = "brightness(1.1)"; // 轻微变亮
+            target.style.animation = "shake 0.3s ease-in-out infinite"; // 愤怒抖动
+            createHitEffect(target);
+        } else {
+            createHitEffect(target);
+        }
+    } else {
+        // 创建击中特效
+        createHitEffect(target);
+    }
     
     // 检查是否达到击杀所需次数
     if (monsterHits >= hitsNeeded) {
@@ -570,6 +629,31 @@ function createHitEffect(monster) {
     }
 }
 
+// 显示报纸掉落提示
+function showNewspaperLost(monster) {
+    const rect = monster.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const hintText = document.createElement('div');
+    hintText.textContent = '📰报纸掉落！僵尸愤怒加速！';
+    hintText.style.position = 'absolute';
+    hintText.style.left = centerX + 'px';
+    hintText.style.top = (centerY - 60) + 'px';
+    hintText.style.transform = 'translateX(-50%)';
+    hintText.style.fontSize = '24px';
+    hintText.style.fontWeight = 'bold';
+    hintText.style.color = '#FF4500';
+    hintText.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5), 0 0 10px rgba(255,255,255,0.8)';
+    hintText.style.zIndex = '20';
+    hintText.style.animation = 'emotionPop 1s ease-out';
+    hintText.style.pointerEvents = 'none';
+    
+    document.getElementById('game').appendChild(hintText);
+    
+    setTimeout(() => hintText.remove(), 1000);
+}
+
 // 显示剩余击中次数
 function showHitsRemaining(monster, remaining) {
     const rect = monster.getBoundingClientRect();
@@ -598,6 +682,9 @@ function showHitsRemaining(monster, remaining) {
 // 击杀怪兽
 function killMonster(monster) {
     moving = false;
+    
+    // 怪兽被击杀，计数器增加
+    monsterCount++;
     
     // 爆炸音效
     playSound('explosion');
@@ -787,6 +874,7 @@ function resetGame() {
     qi = 0;
     score = 0;
     correctStreak = 0;
+    monsterCount = 0; // 重置怪兽计数器
     updateScore();
     monsterX = Math.max(400, window.innerWidth - 150);
     moving = false;
